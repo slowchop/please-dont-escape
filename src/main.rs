@@ -1,5 +1,7 @@
 mod game;
 mod input;
+mod setup;
+mod splash;
 
 use bevy::prelude::*;
 use bevy::diagnostic::{LogDiagnosticsPlugin, FrameTimeDiagnosticsPlugin};
