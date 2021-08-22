@@ -26,6 +26,7 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    info!("setup");
     commands.insert_resource(SplashTimer(Timer::from_seconds(2.0, false)));
 
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -46,8 +47,9 @@ fn timer(time: Res<Time>, mut timer: ResMut<SplashTimer>, mut state: ResMut<Stat
     }
 }
 
-fn escape_key(keys: Res<Input<KeyCode>>, mut state: ResMut<State<AppState>>) {
+fn escape_key(mut keys: ResMut<Input<KeyCode>>, mut state: ResMut<State<AppState>>) {
     if keys.just_pressed(KeyCode::Escape) {
+        keys.reset(KeyCode::Escape);
         state
             .set(AppState::MainMenu)
             .expect("Could not set state to MainMenu");
@@ -57,6 +59,6 @@ fn escape_key(keys: Res<Input<KeyCode>>, mut state: ResMut<State<AppState>>) {
 fn cleanup(mut commands: Commands, sprites: Query<Entity>) {
     debug!("Cleanup splash.");
     for sprite in sprites.iter() {
-        commands.entity(sprite).despawn();
+        commands.entity(sprite).despawn_recursive();
     }
 }
