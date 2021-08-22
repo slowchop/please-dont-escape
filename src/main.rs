@@ -3,14 +3,13 @@ mod menus;
 mod setup;
 mod splash;
 
-use crate::input::exit_on_escape_key;
 use crate::menus::MainMenu;
 use crate::setup::setup_system;
 use crate::splash::SplashScreen;
-use bevy::app::{AppExit, Events};
 use bevy::core::{FixedTimestep, FixedTimesteps};
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
+use bevy_egui::EguiPlugin;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum AppState {
@@ -36,6 +35,7 @@ fn main() {
             ..Default::default()
         })
         .add_plugins(DefaultPlugins)
+        .add_plugin(EguiPlugin)
         //
         .add_state(AppState::SplashScreen)
         //

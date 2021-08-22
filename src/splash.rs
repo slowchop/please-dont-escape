@@ -1,4 +1,6 @@
 use crate::AppState;
+use bevy::app::Events;
+use bevy::input::mouse::MouseButtonInput;
 use bevy::prelude::*;
 
 pub struct SplashScreen;
@@ -11,7 +13,8 @@ impl Plugin for SplashScreen {
             .add_system_set(
                 SystemSet::on_update(AppState::SplashScreen)
                     .with_system(timer.system())
-                    .with_system(escape_key.system()),
+                    .with_system(escape_key.system())
+                    .with_system(mouse_click.system())
             )
             .add_system_set(
                 SystemSet::on_exit(AppState::SplashScreen).with_system(cleanup.system()),
@@ -39,26 +42,36 @@ fn setup(
     });
 }
 
-fn timer(time: Res<Time>, mut timer: ResMut<SplashTimer>, mut state: ResMut<State<AppState>>) {
+fn set_next_state(state: &mut ResMut<State<AppState>>) {
+    state
+        .set(AppState::MainMenu)
+        .expect("Could not set state to MainMenu.");
+}
+
+fn timer(mut state: ResMut<State<AppState>>, time: Res<Time>, mut timer: ResMut<SplashTimer>) {
     if timer.0.tick(time.delta()).just_finished() {
-        state
-            .set(AppState::MainMenu)
-            .expect("Could not set state to MainMenu");
+        set_next_state(&mut state);
     }
 }
 
-fn escape_key(mut keys: ResMut<Input<KeyCode>>, mut state: ResMut<State<AppState>>) {
+fn escape_key(mut state: ResMut<State<AppState>>, mut keys: ResMut<Input<KeyCode>>) {
     if keys.just_pressed(KeyCode::Escape) {
+        // Reset so that the main menu doesn't get an escape key event immediately.
         keys.reset(KeyCode::Escape);
-        state
-            .set(AppState::MainMenu)
-            .expect("Could not set state to MainMenu");
+        set_next_state(&mut state);
     }
 }
 
-fn cleanup(mut commands: Commands, sprites: Query<Entity>) {
+fn mouse_click(mut state: ResMut<State<AppState>>, mut mouse_button: ResMut<Input<MouseButton>>) {
+    if mouse_button.just_pressed(MouseButton::Left) {
+        mouse_button.reset(MouseButton::Left);
+        set_next_state(&mut state);
+    }
+}
+
+fn cleanup(mut commands: Commands, entities: Query<Entity>) {
     debug!("Cleanup splash.");
-    for sprite in sprites.iter() {
+    for sprite in entities.iter() {
         commands.entity(sprite).despawn_recursive();
     }
 }
