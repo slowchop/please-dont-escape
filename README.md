@@ -2,14 +2,6 @@
 
 A game written as an entry to the [Rusty Jam](https://itch.io/jam/rusty-jam).
 
-## Installation
-
-### Cargo
-
-* Install the rust toolchain in order to have cargo installed by following
-  [this](https://www.rust-lang.org/tools/install) guide.
-* run `cargo install {{project-name}}`
-
 ## License
 
 Licensed under either of
