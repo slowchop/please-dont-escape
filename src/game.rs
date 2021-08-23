@@ -318,14 +318,27 @@ fn warden_actions(
             if &forward_pos != door_grid_pos {
                 continue;
             }
-            info!("Door opened?!");
-            commands.entity(warden_ent).remove::<ActionRequested>();
 
-            visible.is_visible = false;
-            commands
-                .entity(door_ent)
-                .remove::<NonWalkable>()
-                .insert(Walkable);
+            commands.entity(warden_ent).remove::<ActionRequested>();
+            match *door {
+                Door::Closed => {
+                    info!("Door opened?!");
+                    visible.is_visible = false;
+                    *door = Door::Open;
+                    commands
+                        .entity(door_ent)
+                        .remove::<NonWalkable>()
+                        .insert(Walkable);
+                }
+                Door::Open => {
+                    visible.is_visible = true;
+                    *door = Door::Closed;
+                    commands
+                        .entity(door_ent)
+                        .remove::<Walkable>()
+                        .insert(NonWalkable);
+                }
+            }
         }
     }
 }
