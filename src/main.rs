@@ -2,6 +2,7 @@ mod game;
 mod input;
 mod menus;
 mod splash;
+mod map;
 
 use crate::game::Game;
 use crate::menus::MainMenu;
