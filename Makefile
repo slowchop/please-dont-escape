@@ -1,9 +1,13 @@
+.PHONY: web
+
 web:
 	rustup default stable
 	rustup target add wasm32-unknown-unknown
 	cargo install wasm-pack
-	wasm-pack build --target web --release
-	rm dist/*
+#	wasm-pack build --target web --release
+	rm -rf dist
+	mkdir dist
+	cp web/* dist/
 	cp pkg/* dist/
 	cp -r assets dist/
 
