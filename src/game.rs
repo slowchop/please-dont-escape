@@ -1,16 +1,19 @@
-use crate::input::exit_on_escape_key;
-use crate::map::{update_map_with_walkables, Map, NonWalkable, Walkable};
-use crate::position::{
-    apply_velocity, check_velocity_collisions, sync_sprite_positions, GridPosition, Position,
-    Velocity,
-};
-use crate::AppState;
+use std::ops::{Add, Deref, Sub};
+
 use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 use bevy::render::camera::Camera;
 use nalgebra::Vector2;
-use rand::{thread_rng, Rng};
-use std::ops::{Add, Deref, Sub};
+use rand::{Rng, thread_rng};
+
+use crate::{AppState, path};
+use crate::input::exit_on_escape_key;
+use crate::map::{Map, NonWalkable, update_map_with_walkables, Walkable};
+use crate::path::Path;
+use crate::position::{
+    apply_velocity, check_velocity_collisions, GridPosition, Position, sync_sprite_positions,
+    Velocity,
+};
 
 pub const CELL_SIZE: f32 = 32.0;
 
@@ -50,7 +53,7 @@ impl Plugin for Game {
                     )
                     .with_system(chase_camera.system())
                     .with_system(
-                        move_along_path
+                        path::move_along_path
                             .system()
                             .before(Label::CheckVelocityCollisions),
                     )
@@ -73,36 +76,7 @@ impl Plugin for Game {
 }
 
 #[derive(Debug)]
-struct Path {
-    cells: Vec<GridPosition>,
-    current: usize,
-}
-
-impl Path {
-    fn new(cells: &[GridPosition]) -> Self {
-        Self {
-            cells: cells.into(),
-            current: 0,
-        }
-    }
-
-    fn target(&self) -> &GridPosition {
-        &self.cells[self.current]
-    }
-
-    fn next(&mut self) -> Option<&GridPosition> {
-        let next_idx = self.current + 1;
-        if self.cells.len() == next_idx {
-            None
-        } else {
-            self.current = next_idx;
-            Some(self.target())
-        }
-    }
-}
-
-#[derive(Debug)]
-struct Speed(f64);
+pub struct Speed(pub f64);
 
 impl Speed {
     fn new(speed: f64) -> Self {
@@ -307,24 +281,6 @@ fn player_keyboard_action(
     for (ent, _) in query.iter_mut() {
         if keys.pressed(KeyCode::Space) {
             debug!("space");
-        }
-    }
-}
-
-fn move_along_path(mut query: Query<(&mut Velocity, &mut Path, &Position, &Speed)>) {
-    for (mut vel, mut path, pos, speed) in query.iter_mut() {
-        let target: Position = path.target().into();
-        let pos: &Position = pos;
-        let diff = target - pos.clone();
-        let remaining = diff.0.magnitude_squared();
-
-        if remaining < 0.1 {
-            let next_target = path.next();
-            if next_target.is_none() {
-                // TODO: Remove Path
-            }
-        } else {
-            *vel.0 = *(diff.0.normalize() * speed.0);
         }
     }
 }

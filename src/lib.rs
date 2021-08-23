@@ -4,6 +4,7 @@ mod map;
 mod menus;
 mod splash;
 mod position;
+mod path;
 
 use crate::game::Game;
 use crate::menus::MainMenu;

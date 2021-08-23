@@ -1,4 +1,4 @@
-use please_dont_escape::run;
+use game::run;
 
 fn main() {
     run();
