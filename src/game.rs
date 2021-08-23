@@ -1,8 +1,9 @@
 use crate::input::exit_on_escape_key;
-use crate::map::{Map, NonWalkable, Walkable};
-use crate::{map, AppState};
+use crate::map::{update_map_with_walkables, Map, NonWalkable, Walkable};
+use crate::AppState;
 use bevy::core::FixedTimestep;
 use bevy::prelude::*;
+use bevy::render::camera::Camera;
 use nalgebra::Vector2;
 use rand::{thread_rng, Rng};
 use std::ops::{Add, Deref, Sub};
@@ -30,7 +31,8 @@ impl Plugin for Game {
                     .with_system(setup.system().label(Label::Setup)),
             )
             .add_system_set(
-                SystemSet::on_update(AppState::MainMenu).with_system(exit_on_escape_key.system()),
+                SystemSet::on_update(AppState::InGame)
+                    .with_system(exit_on_escape_key.system())
             )
             .add_stage_after(
                 CoreStage::Update,
@@ -39,6 +41,7 @@ impl Plugin for Game {
                     // https://github.com/bevyengine/bevy/blob/latest/examples/ecs/fixed_timestep.rs
                     .with_run_criteria(FixedTimestep::step(1f64 / 60f64))
                     .with_system(player_input.system().before(Label::CheckVelocityCollisions))
+                    .with_system(chase_camera.system())
                     .with_system(
                         move_along_path
                             .system()
@@ -56,7 +59,7 @@ impl Plugin for Game {
                             .label(Label::ApplyVelocity),
                     )
                     .with_system(sync_sprite_positions.system().after(Label::ApplyVelocity))
-                    .with_system(map::update_map_with_walkables.system())
+                    .with_system(update_map_with_walkables.system())
                     .with_system(prisoner_escape.system()),
             );
     }
@@ -229,7 +232,9 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    let mut camera = OrthographicCameraBundle::new_2d();
+    camera.transform.scale = Vec3::new(0.3, 0.3, 1.0);
+    commands.spawn_bundle(camera);
 
     let text_map = "\
 oWowowxwowowowowowowowowowowowowowowowo o o o o>
@@ -262,6 +267,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
     let prisoner = materials.add(asset_server.load("chars/prisoner.png").into());
     let wall = materials.add(asset_server.load("cells/wall.png").into());
     let exit = materials.add(asset_server.load("cells/exit.png").into());
+    let prison_door = materials.add(asset_server.load("cells/prison-door.png").into());
 
     let mut cell = Cell::new(0, 0);
     for line in text_map.split("\n") {
@@ -306,6 +312,13 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                         .insert(cell.clone())
                         .insert(Exit);
                 }
+                's' => {
+                    commands
+                        .spawn_bundle(sprite(prison_door.clone(), &cell))
+                        .insert(cell.clone())
+                        .insert(NonWalkable);
+                    needs_walkable = false;
+                }
                 'c' => {
                     needs_cell = true;
                 }
@@ -327,6 +340,27 @@ fn sprite(material: Handle<ColorMaterial>, cell: &Cell) -> SpriteBundle {
         transform: Position::from(cell).to_transform(),
         ..Default::default()
     }
+}
+
+fn chase_camera(
+    mut camera_query: Query<(&Camera, &mut Transform)>,
+    mut player_query: Query<(&KeyboardControl, &Position)>,
+) {
+    let option_first_camera = camera_query.iter_mut().next();
+    let option_first_player = player_query.iter_mut().next();
+
+    if option_first_camera.is_none() {
+        return;
+    }
+    if option_first_player.is_none() {
+        return;
+    }
+
+    let (_, mut camera_pos) = option_first_camera.unwrap();
+    let (_, player_pos) = option_first_player.unwrap();
+
+    camera_pos.translation.x = player_pos.0.x as f32 * CELL_SIZE;
+    camera_pos.translation.y = player_pos.0.y as f32 * CELL_SIZE;
 }
 
 fn player_input(
