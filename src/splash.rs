@@ -1,6 +1,4 @@
 use crate::AppState;
-use bevy::app::Events;
-use bevy::input::mouse::MouseButtonInput;
 use bevy::prelude::*;
 
 pub struct SplashScreen;

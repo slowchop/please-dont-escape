@@ -60,7 +60,7 @@ pub fn update_map_with_walkables(
     mut map: ResMut<Map>,
     query: Query<
         (&Cell, Option<&NonWalkable>, Option<&Walkable>),
-        (Or<(Added<NonWalkable>, Added<Walkable>)>),
+        Or<(Added<NonWalkable>, Added<Walkable>)>,
     >,
 ) {
     for (cell, non_walk, walk) in query.iter() {

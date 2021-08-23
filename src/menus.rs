@@ -3,7 +3,7 @@ use crate::AppState;
 use bevy::app::{AppExit, Events};
 use bevy::prelude::*;
 use bevy_egui::egui::{FontDefinitions, FontFamily, Layout};
-use bevy_egui::{egui, EguiContext, EguiSystem};
+use bevy_egui::{egui, EguiContext};
 
 const LOGO_ID: u64 = 0;
 
@@ -28,7 +28,7 @@ pub fn setup(mut egui_context: ResMut<EguiContext>, assets: Res<AssetServer>) {
     egui_context.set_egui_texture(LOGO_ID, texture_handle);
 
     let mut fonts = FontDefinitions::default();
-    let font = fonts
+    fonts
         .family_and_size
         .insert(egui::TextStyle::Button, (FontFamily::Proportional, 80.0));
     egui_context.ctx().set_fonts(fonts);

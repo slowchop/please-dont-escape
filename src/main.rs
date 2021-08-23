@@ -1,13 +1,12 @@
 mod game;
 mod input;
+mod map;
 mod menus;
 mod splash;
-mod map;
 
 use crate::game::Game;
 use crate::menus::MainMenu;
 use crate::splash::SplashScreen;
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 use std::env;
@@ -35,8 +34,8 @@ fn main() {
             resizable: false,
             ..Default::default()
         })
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        // .add_plugin(LogDiagnosticsPlugin::default())
+        // .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .insert_resource(bevy::log::LogSettings {
             level: bevy::log::Level::DEBUG,
             ..Default::default()
@@ -49,4 +48,3 @@ fn main() {
         .add_plugin(Game)
         .run();
 }
-

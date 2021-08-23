@@ -1,14 +1,11 @@
 use crate::input::exit_on_escape_key;
 use crate::map::{Map, NonWalkable, Walkable};
 use crate::{map, AppState};
-use bevy::core::{FixedTimestep, FixedTimesteps};
-use bevy::ecs::system::EntityCommands;
+use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 use nalgebra::Vector2;
-use pathfinding::prelude::astar;
-use std::collections::HashMap;
-use std::ops::{Add, Deref, Sub};
 use rand::{thread_rng, Rng};
+use std::ops::{Add, Deref, Sub};
 
 const CELL_SIZE: f32 = 32.0;
 
@@ -114,6 +111,14 @@ impl Position {
     pub fn nearest_cell(&self) -> Cell {
         Cell::new(self.0.x.round() as i32, self.0.y.round() as i32)
     }
+
+    pub fn to_transform(&self) -> Transform {
+        Transform::from_xyz(
+            self.0.x.clone() as f32 * CELL_SIZE,
+            self.0.y.clone() as f32 * CELL_SIZE,
+            0.0,
+        )
+    }
 }
 
 impl From<&Cell> for Position {
@@ -212,6 +217,10 @@ struct Warden;
 #[derive(Debug)]
 struct Prisoner;
 
+/// It's the area of a prisoner's cell.
+#[derive(Debug)]
+struct PrisonRoom;
+
 #[derive(Debug)]
 struct Exit;
 
@@ -226,9 +235,9 @@ fn setup(
 oWowowxwowowowowowowowowowowowowowowowo o o o o>
 o                                w   w        o.
 o                         o o o ow  owo o o   o.
-o o o o o                 o     ow  ow  p o   o.
-o                         o     sw  sw    o   o.
-o   P   o                 o p t.o   o   t.o   o.
+o o o o o                 o c c ow  owc p o   o.
+o                         o c c sw  swc c o   o.
+o   P   o                 o p t.o   o c t.o   o.
 o       o                 o o o.o   o o o.o   o.
 o d d   o                      .         .    o.
 o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
@@ -238,7 +247,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
     P warden player spawn point
     p prisoner spawn point
     o normal wall
-    j jail wall
+    c cell
     s security door
     d office desk
     x exit
@@ -261,9 +270,10 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
         for chunk in line.chars().collect::<Vec<_>>().chunks(2) {
             cell.0.x += 1;
             let mut needs_walkable = true;
+            let mut needs_cell = false;
 
             let left = chunk[0];
-            let right = chunk[1];
+            let _right = chunk[1];
             match left {
                 'P' => {
                     commands
@@ -281,6 +291,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                         .insert(Velocity::zero())
                         .insert(Prisoner)
                         .insert(Speed::bad_guy());
+                    needs_cell = true;
                 }
                 'o' => {
                     commands
@@ -295,23 +306,25 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                         .insert(cell.clone())
                         .insert(Exit);
                 }
+                'c' => {
+                    needs_cell = true;
+                }
                 _ => {}
             };
             if needs_walkable {
                 commands.spawn().insert(cell.clone()).insert(Walkable);
             }
+            if needs_cell {
+                commands.spawn().insert(cell.clone()).insert(PrisonRoom);
+            }
         }
     }
 }
 
-fn sprite(material: Handle<ColorMaterial>, pos: &Cell) -> SpriteBundle {
+fn sprite(material: Handle<ColorMaterial>, cell: &Cell) -> SpriteBundle {
     SpriteBundle {
         material,
-        transform: Transform::from_xyz(
-            pos.0.x.clone() as f32 * CELL_SIZE,
-            pos.0.y.clone() as f32 * CELL_SIZE,
-            0.0,
-        ),
+        transform: Position::from(cell).to_transform(),
         ..Default::default()
     }
 }
@@ -349,8 +362,6 @@ fn move_along_path(mut query: Query<(&mut Velocity, &mut Path, &Position, &Speed
         let target: Position = path.target().into();
         let pos: &Position = pos;
         let diff = target - pos.clone();
-        debug!("{:?}", diff);
-
         let remaining = diff.0.magnitude_squared();
 
         if remaining < 0.1 {
@@ -392,13 +403,9 @@ fn apply_velocity(mut query: Query<(&mut Position, &Velocity)>) {
     }
 }
 
-fn sync_sprite_positions(mut query: Query<(&Position, &mut Transform), (Changed<Position>)>) {
+fn sync_sprite_positions(mut query: Query<(&Position, &mut Transform), Changed<Position>>) {
     for (pos, mut transform) in query.iter_mut() {
-        *transform = Transform::from_xyz(
-            pos.0.x.clone() as f32 * CELL_SIZE,
-            pos.0.y.clone() as f32 * CELL_SIZE,
-            0.0,
-        );
+        *transform = pos.to_transform();
     }
 }
 
@@ -414,7 +421,7 @@ fn prisoner_escape(
         return;
     }
     let (_, exit_cell) = exit_cell.unwrap();
-    for (entity, prisoner, pos) in query.iter() {
+    for (entity, _prisoner, pos) in query.iter() {
         let found = map.find_path(&pos.nearest_cell(), &exit_cell);
         if let Some((ref steps, _)) = found {
             info!("found path {:?}", found);
