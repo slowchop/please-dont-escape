@@ -40,7 +40,7 @@ impl Plugin for Game {
                 SystemStage::parallel()
                     // https://github.com/bevyengine/bevy/blob/latest/examples/ecs/fixed_timestep.rs
                     .with_run_criteria(FixedTimestep::step(1f64 / 60f64))
-                    .with_system(player_input.system().before(Label::CheckVelocityCollisions))
+                    .with_system(player_keyboard_movement.system().before(Label::CheckVelocityCollisions))
                     .with_system(chase_camera.system())
                     .with_system(
                         move_along_path
@@ -233,7 +233,7 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let mut camera = OrthographicCameraBundle::new_2d();
-    camera.transform.scale = Vec3::new(0.3, 0.3, 1.0);
+    camera.transform.scale = Vec3::new(0.4, 0.4, 1.0);
     commands.spawn_bundle(camera);
 
     let text_map = "\
@@ -241,7 +241,7 @@ oWowowxwowowowowowowowowowowowowowowowo o o o o>
 o                                w   w        o.
 o                         o o o ow  owo o o   o.
 o o o o o                 o c c ow  owc p o   o.
-o                         o c c sw  swc c o   o.
+o                         o c c  w  swc c o   o.
 o   P   o                 o p t.o   o c t.o   o.
 o       o                 o o o.o   o o o.o   o.
 o d d   o                      .         .    o.
@@ -363,11 +363,11 @@ fn chase_camera(
     camera_pos.translation.y = player_pos.0.y as f32 * CELL_SIZE;
 }
 
-fn player_input(
+fn player_keyboard_movement(
     keys: Res<Input<KeyCode>>,
-    mut query: Query<(&KeyboardControl, &mut Velocity, &Speed)>,
+    mut query: Query<(&mut Velocity, &Speed), With<KeyboardControl>>,
 ) {
-    for (_, mut vel, speed) in query.iter_mut() {
+    for (mut vel, speed) in query.iter_mut() {
         vel.0.x = 0.0;
         vel.0.y = 0.0;
 
@@ -388,6 +388,19 @@ fn player_input(
             vel.0 = vel.0.normalize();
         }
         vel.0 *= speed.0;
+
+    }
+}
+
+fn player_keyboard_action(
+    keys: Res<Input<KeyCode>>,
+    map: Res<Map>,
+    mut query: Query<(Entity, &KeyboardControl)>,
+) {
+    for (ent, _) in query.iter_mut() {
+        if keys.pressed(KeyCode::Space) {
+            
+        }
     }
 }
 
