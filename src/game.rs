@@ -5,6 +5,7 @@ use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use std::collections::HashMap;
+use pathfinding::prelude::astar;
 
 const CELL_SIZE: f32 = 32.0;
 
@@ -52,7 +53,8 @@ impl Plugin for Game {
                             .label(Label::ApplyVelocity),
                     )
                     .with_system(sync_sprite_positions.system().after(Label::ApplyVelocity))
-                    .with_system(update_map_with_walkables.system()),
+                    .with_system(update_map_with_walkables.system())
+                    .with_system(prisoner_escape.system()),
             );
     }
 }
@@ -152,12 +154,6 @@ struct MapNode {
 }
 
 #[derive(Debug)]
-struct Person;
-
-#[derive(Debug)]
-struct Player;
-
-#[derive(Debug)]
 struct KeyboardControl;
 
 #[derive(Debug)]
@@ -224,10 +220,8 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                         .spawn_bundle(sprite(warden.clone(), &cell))
                         .insert(Position::from(&cell))
                         .insert(Velocity::zero())
-                        .insert(Person)
                         .insert(Warden)
                         .insert(Speed::person())
-                        .insert(Player)
                         .insert(KeyboardControl);
                 }
                 'p' => {
@@ -235,7 +229,6 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                         .spawn_bundle(sprite(prisoner.clone(), &cell))
                         .insert(Position::from(&cell))
                         .insert(Velocity::zero())
-                        .insert(Person)
                         .insert(Prisoner)
                         .insert(Speed::person());
                 }
@@ -357,5 +350,15 @@ fn sync_sprite_positions(mut query: Query<(&Position, &mut Transform), (Changed<
             pos.0.y.clone() as f32 * CELL_SIZE,
             0.0,
         );
+    }
+}
+
+fn prisoner_escape(mut commands: Commands, query: Query<(Entity, &Prisoner, &Position), Without<Path>>, exits: Query<(&Exit, &Cell)>) {
+    let exit = exits.iter().next().unwrap();
+    for (entity, prisoner, pos) in query.iter() {
+        let cell = pos.nearest_cell();
+        // astar(cell, )
+        info!("entity {:?}", entity);
+        commands.entity(entity).insert(Path(vec![]));
     }
 }
