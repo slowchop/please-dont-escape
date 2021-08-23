@@ -91,7 +91,7 @@ impl From<Vector2<f64>> for Position {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Velocity(Vector2<f64>);
 
 impl Velocity {
@@ -179,11 +179,11 @@ fn setup(
     let text_map = "\
 oWowowxwowowowowowowowowowowowowowowowo o o o o>
 o                                w   w        o.
-o                         j j j jw  jwj j j   o.
-o o o o o                 j     jw  jw  p j   o.
-o                         j     sw  sw    j   o.
-o   P   o                 j p t.j   j   t.j   o.
-o       o                 j j j.j   j j j.j   o.
+o                         o o o ow  owo o o   o.
+o o o o o                 o     ow  ow  p o   o.
+o                         o     sw  sw    o   o.
+o   P   o                 o p t.o   o   t.o   o.
+o       o                 o o o.o   o o o.o   o.
 o d d   o                      .         .    o.
 o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
 ";
@@ -204,6 +204,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
      */
 
     let warden = materials.add(asset_server.load("chars/warden.png").into());
+    let prisoner = materials.add(asset_server.load("chars/prisoner.png").into());
     let wall = materials.add(asset_server.load("cells/wall.png").into());
     let exit = materials.add(asset_server.load("cells/exit.png").into());
 
@@ -225,9 +226,18 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                         .insert(Velocity::zero())
                         .insert(Person)
                         .insert(Warden)
-                        .insert(Player)
                         .insert(Speed::person())
+                        .insert(Player)
                         .insert(KeyboardControl);
+                }
+                'p' => {
+                    commands
+                        .spawn_bundle(sprite(prisoner.clone(), &cell))
+                        .insert(Position::from(&cell))
+                        .insert(Velocity::zero())
+                        .insert(Person)
+                        .insert(Prisoner)
+                        .insert(Speed::person());
                 }
                 'o' => {
                     commands
@@ -293,14 +303,28 @@ fn player_input(
 
 fn check_velocity_collisions(map: Res<Map>, mut query: Query<(&Position, &mut Velocity)>) {
     for (pos, mut vel) in query.iter_mut() {
-        let new_pos = Position::from(pos.0 + vel.0);
-        let cell = new_pos.nearest_cell();
-        let is_walkable = map.walkable_cells.get(&cell).unwrap_or(&false);
-        if !is_walkable {
-            // TODO: Allow velocity to slide against wall...
-            *vel = Velocity::zero();
+        if !is_walkable(&map, &Position::from(pos.0 + vel.0)) {
+            // Allow "sliding" on the wall.
+            let mut v_vel = vel.clone();
+            v_vel.0.x = 0.0;
+            let mut h_vel = vel.clone();
+            h_vel.0.y = 0.0;
+            if is_walkable(&map, &Position::from(pos.0 + v_vel.0)) {
+                *vel = v_vel;
+            } else if is_walkable(&map, &Position::from(pos.0 + h_vel.0)) {
+                *vel = h_vel;
+            } else {
+                // Can't slide at all. Probably in a corner.
+                // TODO: Maybe trapped inside something that just spawned or closed.
+                *vel = Velocity::zero();
+            }
         };
     }
+}
+
+fn is_walkable(map: &Map, pos: &Position) -> bool {
+    let cell = pos.nearest_cell();
+    *map.walkable_cells.get(&cell).unwrap_or(&false)
 }
 
 fn update_map_with_walkables(
