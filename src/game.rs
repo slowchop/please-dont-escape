@@ -4,36 +4,60 @@ use bevy::core::{FixedTimestep, FixedTimesteps};
 use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
 use nalgebra::Vector2;
+use std::collections::HashMap;
 
 const CELL_SIZE: f32 = 32.0;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, StageLabel)]
 struct FixedUpdateStage;
 
+#[derive(Clone, Hash, Debug, PartialEq, Eq, SystemLabel)]
+enum Label {
+    Setup,
+    PlayerInput,
+    CheckVelocityCollisions,
+    ApplyVelocity,
+}
+
 pub struct Game;
 
 impl Plugin for Game {
     fn build(&self, app: &mut AppBuilder) {
-        app
+        app.insert_resource(Map::new())
             //
-            .add_system_set(SystemSet::on_enter(AppState::InGame).with_system(setup.system()))
+            .add_system_set(
+                SystemSet::on_enter(AppState::InGame)
+                    .with_system(setup.system().label(Label::Setup)),
+            )
             .add_system_set(
                 SystemSet::on_update(AppState::MainMenu).with_system(exit_on_escape_key.system()),
             )
-            // https://github.com/bevyengine/bevy/blob/latest/examples/ecs/fixed_timestep.rs
             .add_stage_after(
                 CoreStage::Update,
                 FixedUpdateStage,
                 SystemStage::parallel()
+                    // https://github.com/bevyengine/bevy/blob/latest/examples/ecs/fixed_timestep.rs
                     .with_run_criteria(FixedTimestep::step(1f64 / 60f64))
-                    .with_system(player_input.system())
-                    .with_system(apply_velocity.system())
-                    .with_system(sync_sprite_positions.system())
+                    .with_system(player_input.system().label(Label::PlayerInput))
+                    .with_system(
+                        check_velocity_collisions
+                            .system()
+                            .after(Label::PlayerInput)
+                            .label(Label::CheckVelocityCollisions),
+                    )
+                    .with_system(
+                        apply_velocity
+                            .system()
+                            .after(Label::CheckVelocityCollisions)
+                            .label(Label::ApplyVelocity),
+                    )
+                    .with_system(sync_sprite_positions.system().after(Label::ApplyVelocity))
+                    .with_system(update_map_with_walkables.system()),
             );
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 struct Cell(Vector2<i32>);
 
 impl Cell {
@@ -49,11 +73,21 @@ impl Position {
     fn new(x: f64, y: f64) -> Self {
         Self(Vector2::new(x, y))
     }
+
+    fn nearest_cell(&self) -> Cell {
+        Cell::new(self.0.x.round() as i32, self.0.y.round() as i32)
+    }
 }
 
 impl From<&Cell> for Position {
     fn from(cell: &Cell) -> Self {
         Position::new(cell.clone().0.x as f64, cell.clone().0.y as f64)
+    }
+}
+
+impl From<Vector2<f64>> for Position {
+    fn from(v: Vector2<f64>) -> Self {
+        Self(v)
     }
 }
 
@@ -86,10 +120,24 @@ impl Speed {
     }
 }
 
+/// Specific cells that can be walked on. This should be added when NonWalkable was removed.
+#[derive(Debug)]
+struct Walkable;
+
+#[derive(Debug)]
+struct NonWalkable;
+
 #[derive(Debug)]
 struct Map {
-    cells: bevy::utils::HashMap<Cell, ()>,
-    size: Cell,
+    walkable_cells: bevy::utils::HashMap<Cell, bool>,
+}
+
+impl Map {
+    fn new() -> Self {
+        Self {
+            walkable_cells: bevy::utils::HashMap::default(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -119,9 +167,6 @@ struct Warden;
 struct Prisoner;
 
 #[derive(Debug)]
-struct Wall;
-
-#[derive(Debug)]
 struct Exit;
 
 fn setup(
@@ -131,14 +176,7 @@ fn setup(
 ) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 
-    // commands
-    //     .spawn()
-    //     .insert(Player)
-    //     .insert(Person)
-    //     .insert(Position::new(2, 2))
-    //     .insert(Speed::new(1.0));
-    //
-    let map = "\
+    let text_map = "\
 oWowowxwowowowowowowowowowowowowowowowo o o o o>
 o                                w   w        o.
 o                         j j j jw  jwj j j   o.
@@ -170,11 +208,12 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
     let exit = materials.add(asset_server.load("cells/exit.png").into());
 
     let mut cell = Cell::new(0, 0);
-    for line in map.split("\n") {
+    for line in text_map.split("\n") {
         cell.0.x = 0;
         cell.0.y -= 1;
         for chunk in line.chars().collect::<Vec<_>>().chunks(2) {
             cell.0.x += 1;
+            let mut needs_walkable = true;
 
             let left = chunk[0];
             let right = chunk[1];
@@ -194,7 +233,8 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                     commands
                         .spawn_bundle(sprite(wall.clone(), &cell))
                         .insert(cell.clone())
-                        .insert(Wall);
+                        .insert(NonWalkable);
+                    needs_walkable = false;
                 }
                 'x' => {
                     commands
@@ -204,6 +244,9 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                 }
                 _ => {}
             };
+            if needs_walkable {
+                commands.spawn().insert(cell.clone()).insert(Walkable);
+            }
         }
     }
 }
@@ -240,10 +283,40 @@ fn player_input(
         if keys.pressed(KeyCode::S) {
             vel.0.y -= 1.0;
         }
+
         if vel.0.magnitude() > 0.0 {
             vel.0 = vel.0.normalize();
         }
         vel.0 *= speed.0;
+    }
+}
+
+fn check_velocity_collisions(map: Res<Map>, mut query: Query<(&Position, &mut Velocity)>) {
+    for (pos, mut vel) in query.iter_mut() {
+        let new_pos = Position::from(pos.0 + vel.0);
+        let cell = new_pos.nearest_cell();
+        let walkable_cell = map.walkable_cells.get(&cell);
+        let is_walkable = map.walkable_cells.get(&cell).unwrap_or(&false);
+        if !is_walkable {
+            *vel = Velocity::zero();
+        };
+    }
+}
+
+fn update_map_with_walkables(
+    mut map: ResMut<Map>,
+    query: Query<
+        (&Cell, Option<&NonWalkable>, Option<&Walkable>),
+        (Or<(Added<NonWalkable>, Added<Walkable>)>),
+    >,
+) {
+    for (cell, non_walk, walk) in query.iter() {
+        let walkable = match (non_walk.is_some(), walk.is_some()) {
+            (false, true) => true,
+            (true, false) => false,
+            _ => panic!("Something funny is going on with walk vs non walk."),
+        };
+        map.walkable_cells.insert(cell.clone(), walkable);
     }
 }
 
@@ -261,10 +334,4 @@ fn sync_sprite_positions(mut query: Query<(&Position, &mut Transform), (Changed<
             0.0,
         );
     }
-}
-
-fn move_things(mut query: Query<(&mut Position, &Speed)>) {
-    // for (pos, speed) in query.iter_mut() {
-    //     info!("{:?}", cell);
-    // }
 }
