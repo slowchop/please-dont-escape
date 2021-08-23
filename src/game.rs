@@ -3,6 +3,7 @@ use crate::AppState;
 use bevy::core::{FixedTimestep, FixedTimesteps};
 use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
+use nalgebra::Vector2;
 
 const CELL_SIZE: f32 = 32.0;
 
@@ -25,39 +26,47 @@ impl Plugin for Game {
                 FixedUpdateStage,
                 SystemStage::parallel()
                     .with_run_criteria(FixedTimestep::step(1f64 / 60f64))
+                    .with_system(player_input.system())
+                    .with_system(apply_velocity.system())
                     .with_system(sync_sprite_positions.system())
-                    .with_system(player_input.system()),
             );
     }
 }
 
 #[derive(Debug, Clone)]
-struct Cell {
-    x: i32,
-    y: i32,
-}
+struct Cell(Vector2<i32>);
 
 impl Cell {
     fn new(x: i32, y: i32) -> Self {
-        Self { x, y }
+        Self(Vector2::new(x, y))
     }
 }
 
 #[derive(Debug, Clone)]
-struct Position {
-    x: f64,
-    y: f64,
-}
+struct Position(Vector2<f64>);
 
 impl Position {
     fn new(x: f64, y: f64) -> Self {
-        Self { x, y }
+        Self(Vector2::new(x, y))
     }
 }
 
 impl From<&Cell> for Position {
     fn from(cell: &Cell) -> Self {
-        Position::new(cell.clone().x as f64, cell.clone().y as f64)
+        Position::new(cell.clone().0.x as f64, cell.clone().0.y as f64)
+    }
+}
+
+#[derive(Debug)]
+struct Velocity(Vector2<f64>);
+
+impl Velocity {
+    fn new(x: f64, y: f64) -> Self {
+        Self(Vector2::new(x, y))
+    }
+
+    fn zero() -> Self {
+        Self::new(0.0, 0.0)
     }
 }
 
@@ -135,14 +144,14 @@ o                                w   w        o.
 o                         j j j jw  jwj j j   o.
 o o o o o                 j     jw  jw  p j   o.
 o                         j     sw  sw    j   o.
-o   W   o                 j p t.j   j   t.j   o.
+o   P   o                 j p t.j   j   t.j   o.
 o       o                 j j j.j   j j j.j   o.
 o d d   o                      .         .    o.
 o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
 ";
 
     /*
-    W warden player spawn point
+    P warden player spawn point
     p prisoner spawn point
     o normal wall
     j jail wall
@@ -162,18 +171,19 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
 
     let mut cell = Cell::new(0, 0);
     for line in map.split("\n") {
-        cell.x = 0;
-        cell.y -= 1;
+        cell.0.x = 0;
+        cell.0.y -= 1;
         for chunk in line.chars().collect::<Vec<_>>().chunks(2) {
-            cell.x += 1;
+            cell.0.x += 1;
 
             let left = chunk[0];
             let right = chunk[1];
             match left {
-                'W' => {
+                'P' => {
                     commands
                         .spawn_bundle(sprite(warden.clone(), &cell))
                         .insert(Position::from(&cell))
+                        .insert(Velocity::zero())
                         .insert(Person)
                         .insert(Warden)
                         .insert(Player)
@@ -202,8 +212,8 @@ fn sprite(material: Handle<ColorMaterial>, pos: &Cell) -> SpriteBundle {
     SpriteBundle {
         material,
         transform: Transform::from_xyz(
-            pos.x.clone() as f32 * CELL_SIZE,
-            pos.y.clone() as f32 * CELL_SIZE,
+            pos.0.x.clone() as f32 * CELL_SIZE,
+            pos.0.y.clone() as f32 * CELL_SIZE,
             0.0,
         ),
         ..Default::default()
@@ -212,27 +222,44 @@ fn sprite(material: Handle<ColorMaterial>, pos: &Cell) -> SpriteBundle {
 
 fn player_input(
     keys: Res<Input<KeyCode>>,
-    mut query: Query<(&KeyboardControl, &mut Position, &Speed)>,
+    mut query: Query<(&KeyboardControl, &mut Velocity, &Speed)>,
 ) {
-    for (_, mut pos, speed) in query.iter_mut() {
+    for (_, mut vel, speed) in query.iter_mut() {
+        vel.0.x = 0.0;
+        vel.0.y = 0.0;
+
         if keys.pressed(KeyCode::A) {
-            pos.x -= speed.0;
+            vel.0.x -= 1.0;
         }
         if keys.pressed(KeyCode::D) {
-            pos.x += speed.0;
+            vel.0.x += 1.0;
         }
         if keys.pressed(KeyCode::W) {
-            pos.y += speed.0;
+            vel.0.y += 1.0;
         }
         if keys.pressed(KeyCode::S) {
-            pos.y -= speed.0;
+            vel.0.y -= 1.0;
         }
+        if vel.0.magnitude() > 0.0 {
+            vel.0 = vel.0.normalize();
+        }
+        vel.0 *= speed.0;
+    }
+}
+
+fn apply_velocity(mut query: Query<(&mut Position, &Velocity)>) {
+    for (mut pos, vel) in query.iter_mut() {
+        pos.0 += vel.0;
     }
 }
 
 fn sync_sprite_positions(mut query: Query<(&Position, &mut Transform), (Changed<Position>)>) {
     for (pos, mut transform) in query.iter_mut() {
-        *transform = Transform::from_xyz(pos.x.clone() as f32 * CELL_SIZE, pos.y.clone() as f32 * CELL_SIZE, 0.0);
+        *transform = Transform::from_xyz(
+            pos.0.x.clone() as f32 * CELL_SIZE,
+            pos.0.y.clone() as f32 * CELL_SIZE,
+            0.0,
+        );
     }
 }
 
