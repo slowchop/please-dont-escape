@@ -1,15 +1,13 @@
-use std::collections::HashMap;
-use std::ops::{Add, Deref, Sub};
-
+use crate::input::exit_on_escape_key;
+use crate::map::{Map, NonWalkable, Walkable};
+use crate::{map, AppState};
 use bevy::core::{FixedTimestep, FixedTimesteps};
 use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use pathfinding::prelude::astar;
-
-use crate::{AppState, map};
-use crate::input::exit_on_escape_key;
-use crate::map::{Map, NonWalkable, Walkable};
+use std::collections::HashMap;
+use std::ops::{Add, Deref, Sub};
 
 const CELL_SIZE: f32 = 32.0;
 
@@ -64,7 +62,7 @@ impl Plugin for Game {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Cell(Vector2<i32>);
+pub struct Cell(pub Vector2<i32>);
 
 impl Cell {
     fn new(x: i32, y: i32) -> Self {
@@ -358,20 +356,9 @@ fn prisoner_escape(
     }
     let (_, exit_cell) = exit_cell.unwrap();
     for (entity, prisoner, pos) in query.iter() {
+        let found = map.find_path(&pos.nearest_cell(), &exit_cell);
+
         let cell = pos.nearest_cell();
-        let found = astar(
-            &cell,
-            |cell: &Cell| {
-                let r = map.walkable_neighbours(cell).into_iter().map(|d| (d, 1)).collect::<Vec<_>>();
-                debug!("Successors for {:?}: {:?}", cell, r);
-                r
-            },
-            |c| {
-                let diff = c.0 - exit_cell.0;
-                diff.x.abs() + diff.y.abs()
-            },
-            |c| c == exit_cell,
-        );
         info!("found path {:?}", found);
         commands.entity(entity).insert(Path(vec![]));
     }

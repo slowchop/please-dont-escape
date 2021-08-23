@@ -1,6 +1,6 @@
-use bevy::ecs::prelude::{Added, Or, Query, ResMut};
-
 use crate::game::{Cell, Position};
+use bevy::ecs::prelude::{Added, Or, Query, ResMut};
+use pathfinding::prelude::astar;
 
 /// Specific cells that can be walked on. This should be added when NonWalkable was removed.
 #[derive(Debug)]
@@ -21,7 +21,7 @@ impl Map {
         }
     }
 
-    pub(crate) fn is_walkable_pos(&self, pos: &Position) -> bool {
+    pub fn is_walkable_pos(&self, pos: &Position) -> bool {
         self.is_walkable_cell(&pos.nearest_cell())
     }
 
@@ -30,12 +30,29 @@ impl Map {
         *self.walkable_cells.get(&cell).unwrap_or(&false)
     }
 
-    pub(crate) fn walkable_neighbours(&self, cell: &Cell) -> Vec<Cell> {
+    pub fn walkable_neighbours(&self, cell: &Cell) -> Vec<Cell> {
         Cell::four_directions()
             .iter()
             .map(|c| cell + c)
             .filter(|c| self.is_walkable_cell(&c))
             .collect()
+    }
+
+    pub fn find_path(&self, src: &Cell, dst: &Cell) -> Option<(Vec<Cell>, i32)> {
+        astar(
+            src,
+            |cell: &Cell| {
+                self.walkable_neighbours(cell)
+                    .into_iter()
+                    .map(|d| (d, 1i32))
+                    .collect::<Vec<_>>()
+            },
+            |cell| {
+                let diff = cell - dst;
+                diff.0.x.abs() + diff.0.y.abs()
+            },
+            |c| c == dst,
+        )
     }
 }
 
