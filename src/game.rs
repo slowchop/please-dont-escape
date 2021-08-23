@@ -275,22 +275,24 @@ fn player_keyboard_movement(
     mut query: Query<(&mut Velocity, &mut Direction, &Speed), With<KeyboardControl>>,
 ) {
     for (mut vel, mut dir, speed) in query.iter_mut() {
-        *dir = Direction::new();
-
+        let mut new_dir = Direction::default();
         if keys.pressed(KeyCode::A) {
-            dir.left();
+            new_dir.left();
         }
         if keys.pressed(KeyCode::D) {
-            dir.right();
+            new_dir.right();
         }
         if keys.pressed(KeyCode::W) {
-            dir.up();
+            new_dir.up();
         }
         if keys.pressed(KeyCode::S) {
-            dir.down();
+            new_dir.down();
+        }
+        if new_dir != Direction::default() {
+            *dir = new_dir.clone();
         }
 
-        *vel = dir.normalized_velocity(speed);
+        *vel = new_dir.normalized_velocity(speed);
     }
 }
 
@@ -312,6 +314,7 @@ fn warden_actions(
     mut doors: Query<(Entity, &GridPosition, &mut Door, &mut Visible)>,
 ) {
     for (warden_ent, warden_pos, warden_dir) in wardens.iter() {
+        commands.entity(warden_ent).remove::<ActionRequested>();
         info!("warden at {:?}", warden_pos.nearest_cell() + warden_dir);
         let forward_pos = warden_pos.nearest_cell() + warden_dir;
         for (door_ent, door_grid_pos, mut door, mut visible) in doors.iter_mut() {
@@ -319,7 +322,6 @@ fn warden_actions(
                 continue;
             }
 
-            commands.entity(warden_ent).remove::<ActionRequested>();
             match *door {
                 Door::Closed => {
                     info!("Door opened?!");

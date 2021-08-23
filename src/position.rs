@@ -106,12 +106,12 @@ impl Sub for Position {
 }
 
 /// -1, 0, 1 on each axis. Since the range is past that we keep the wrapped type private.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Direction(Vector2<i8>);
 
 impl Direction {
     pub fn new() -> Self {
-        Self(Vector2::new(0, 0))
+        Self::default()
     }
 
     pub fn left(&mut self) {
@@ -138,6 +138,12 @@ impl Direction {
         }
         vel.0 *= speed.0;
         vel
+    }
+}
+
+impl Default for Direction {
+    fn default() -> Self {
+        Self(Vector2::new(0, 0))
     }
 }
 
