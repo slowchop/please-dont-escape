@@ -8,3 +8,4 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 bevy = "0.5"
 bevy_egui = "0.6"
+pathfinding = "2.0"

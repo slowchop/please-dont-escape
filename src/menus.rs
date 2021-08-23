@@ -2,7 +2,7 @@ use crate::input::exit_on_escape_key;
 use crate::AppState;
 use bevy::app::{AppExit, Events};
 use bevy::prelude::*;
-use bevy_egui::egui::{Layout, FontDefinitions, FontFamily};
+use bevy_egui::egui::{FontDefinitions, FontFamily, Layout};
 use bevy_egui::{egui, EguiContext, EguiSystem};
 
 const LOGO_ID: u64 = 0;
@@ -28,7 +28,9 @@ pub fn setup(mut egui_context: ResMut<EguiContext>, assets: Res<AssetServer>) {
     egui_context.set_egui_texture(LOGO_ID, texture_handle);
 
     let mut fonts = FontDefinitions::default();
-    let font = fonts.family_and_size.insert(egui::TextStyle::Button , (FontFamily::Proportional, 80.0));
+    let font = fonts
+        .family_and_size
+        .insert(egui::TextStyle::Button, (FontFamily::Proportional, 80.0));
     egui_context.ctx().set_fonts(fonts);
 
     let mut style: egui::Style = (*egui_context.ctx().style()).clone();
@@ -41,6 +43,7 @@ pub fn setup(mut egui_context: ResMut<EguiContext>, assets: Res<AssetServer>) {
 
 fn main_menu(
     egui_context: ResMut<EguiContext>,
+    mut state: ResMut<State<AppState>>,
     mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
 ) {
     egui::CentralPanel::default().show(egui_context.ctx(), |ui| {
@@ -51,13 +54,14 @@ fn main_menu(
             ));
 
             if ui.button("Solo").clicked() {
-                info!("Clicked")
+                state.set(AppState::InGame).expect("Could not set state to InGame.");
             }
-            if ui.button("Multiplayer").clicked() {
-                info!("Clicked")
-            }
+
+            // if ui.button("Multiplayer").clicked() {
+            //     state.set(AppState::InGame);
+            // }
+
             if ui.button("Exit").clicked() {
-                info!("Clicked");
                 app_exit_events.send(AppExit);
             }
         });
