@@ -315,7 +315,6 @@ fn warden_actions(
 ) {
     for (warden_ent, warden_pos, warden_dir) in wardens.iter() {
         commands.entity(warden_ent).remove::<ActionRequested>();
-        info!("warden at {:?}", warden_pos.nearest_cell() + warden_dir);
         let forward_pos = warden_pos.nearest_cell() + warden_dir;
         for (door_ent, door_grid_pos, mut door, mut visible) in doors.iter_mut() {
             if &forward_pos != door_grid_pos {
@@ -324,7 +323,7 @@ fn warden_actions(
 
             match *door {
                 Door::Closed => {
-                    info!("Door opened?!");
+                    info!("Door opened");
                     visible.is_visible = false;
                     *door = Door::Open;
                     commands
@@ -333,6 +332,7 @@ fn warden_actions(
                         .insert(Walkable);
                 }
                 Door::Open => {
+                    info!("Door closed");
                     visible.is_visible = true;
                     *door = Door::Closed;
                     commands
