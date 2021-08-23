@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use crate::game::Speed;
-use crate::position::{GridPosition, Position, Velocity};
+use crate::position::{GridPosition, Position, Velocity, Speed};
 
 #[derive(Debug)]
 pub struct Path {

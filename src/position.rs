@@ -1,9 +1,10 @@
+use crate::game::CELL_SIZE;
 use crate::map::Map;
 use bevy::prelude::*;
 use core::convert::From;
 use nalgebra::Vector2;
+use rand::{thread_rng, Rng};
 use std::ops::{Add, Deref, Sub};
-use crate::game::CELL_SIZE;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct GridPosition(pub Vector2<i32>);
@@ -47,7 +48,11 @@ impl Add<&Direction> for GridPosition {
     type Output = GridPosition;
 
     fn add(self, rhs: &Direction) -> Self::Output {
-        todo!()
+        let mut pos = self.clone();
+        let rhs = rhs.to_grid_pos();
+        pos.0.x += rhs.0.x;
+        pos.0.y += rhs.0.y;
+        pos
     }
 }
 
@@ -100,12 +105,57 @@ impl Sub for Position {
     }
 }
 
-pub enum Direction {
-    None,
-    Left,
-    Right,
-    Up,
-    Down,
+/// -1, 0, 1 on each axis. Since the range is past that we keep the wrapped type private.
+#[derive(Debug)]
+pub struct Direction(Vector2<i8>);
+
+impl Direction {
+    pub fn new() -> Self {
+        Self(Vector2::new(0, 0))
+    }
+
+    pub fn left(&mut self) {
+        self.0.x = -1;
+    }
+    pub fn right(&mut self) {
+        self.0.x = 1;
+    }
+    pub fn up(&mut self) {
+        self.0.y = 1;
+    }
+    pub fn down(&mut self) {
+        self.0.y = -1;
+    }
+
+    pub fn to_grid_pos(&self) -> GridPosition {
+        GridPosition::new(self.0.x as i32, self.0.y as i32)
+    }
+
+    pub fn normalized_velocity(&self, speed: &Speed) -> Velocity {
+        let mut vel = Velocity::new(self.0.x as f64, self.0.y as f64);
+        if vel.0.magnitude() > 0.0 {
+            vel.0 = vel.0.normalize();
+        }
+        vel.0 *= speed.0;
+        vel
+    }
+}
+
+#[derive(Debug)]
+pub struct Speed(pub f64);
+
+impl Speed {
+    fn new(speed: f64) -> Self {
+        Self(speed)
+    }
+
+    pub fn good_guy() -> Self {
+        Self::new(0.1)
+    }
+
+    pub fn bad_guy() -> Self {
+        Self::new(0.04 + thread_rng().gen_range(0.0..0.02))
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -3,7 +3,7 @@ use crate::map::{update_map_with_walkables, Map, NonWalkable, Walkable};
 use crate::path::Path;
 use crate::position::{
     apply_velocity, check_velocity_collisions, sync_sprite_positions, Direction, GridPosition,
-    Position, Velocity,
+    Position, Speed, Velocity,
 };
 use crate::{path, AppState};
 use bevy::core::FixedTimestep;
@@ -40,7 +40,10 @@ impl Plugin for Game {
             .add_system_set(
                 SystemSet::on_update(AppState::InGame)
                     .with_system(exit_on_escape_key.system())
-                    .with_system(ui.system()),
+                    .with_system(ui.system())
+                    // This is here because it uses `just_pressed` which will be skipped in the
+                    // FixedUpdateStage.
+                    .with_system(player_keyboard_action.system()),
             )
             .add_stage_after(
                 CoreStage::Update,
@@ -72,25 +75,9 @@ impl Plugin for Game {
                     )
                     .with_system(sync_sprite_positions.system().after(Label::ApplyVelocity))
                     .with_system(update_map_with_walkables.system())
+                    .with_system(warden_actions.system())
                     .with_system(prisoner_escape.system()),
             );
-    }
-}
-
-#[derive(Debug)]
-pub struct Speed(pub f64);
-
-impl Speed {
-    fn new(speed: f64) -> Self {
-        Self(speed)
-    }
-
-    fn good_guy() -> Self {
-        Self::new(0.1)
-    }
-
-    fn bad_guy() -> Self {
-        Self::new(0.04 + thread_rng().gen_range(0.0..0.02))
     }
 }
 
@@ -107,9 +94,14 @@ struct Prisoner;
 struct ActionRequested;
 
 /// It's the area of a prisoner's room. It is used to know what is outside room room or not.
-/// It's called `room` not cell because [Cell] is the name used as a snapped position.
 #[derive(Debug)]
 struct PrisonRoom;
+
+#[derive(Debug)]
+enum Door {
+    Open,
+    Closed,
+}
 
 #[derive(Debug)]
 struct Exit;
@@ -135,7 +127,7 @@ oWowowxwowowowowowowowowowowowowowowowo o o o o>
 o                                w   w        o.
 o                         o o o ow  owo o o   o.
 o o o o o                 o c c ow  owc p o   o.
-o                         o c c  w  swc c o   o.
+o                         o c c sw  swc c o   o.
 o   P   o                 o p t.o   o c t.o   o.
 o       o                 o o o.o   o o o.o   o.
 o d d   o                      .         .    o.
@@ -179,7 +171,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                     commands
                         .spawn_bundle(sprite(warden.clone(), &cell))
                         .insert(Position::from(&cell))
-                        .insert(Direction::None)
+                        .insert(Direction::new())
                         .insert(Velocity::zero())
                         .insert(Warden)
                         .insert(Speed::good_guy())
@@ -211,6 +203,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                     commands
                         .spawn_bundle(sprite(prison_door.clone(), &cell))
                         .insert(cell.clone())
+                        .insert(Door::Closed)
                         .insert(NonWalkable);
                     needs_walkable = false;
                 }
@@ -231,12 +224,13 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
 
 fn ui(
     egui_context: ResMut<EguiContext>,
-    wardens: Query<&Position, With<Warden>>,
+    wardens: Query<(&Position, &Direction), With<Warden>>,
     prisoners: Query<&Position, With<Prisoner>>,
 ) {
     egui::Window::new("Debug").show(egui_context.ctx(), |ui| {
-        for pos in wardens.iter() {
+        for (pos, dir) in wardens.iter() {
             ui.heading("Warden");
+            ui.label(format!("{:?}", dir));
             ui.label(format!("{:?}", pos));
         }
 
@@ -281,46 +275,60 @@ fn player_keyboard_movement(
     mut query: Query<(&mut Velocity, &mut Direction, &Speed), With<KeyboardControl>>,
 ) {
     for (mut vel, mut dir, speed) in query.iter_mut() {
-        vel.0.x = 0.0;
-        vel.0.y = 0.0;
+        *dir = Direction::new();
 
         if keys.pressed(KeyCode::A) {
-            vel.0.x -= 1.0;
-            *dir = Direction::Left;
+            dir.left();
         }
         if keys.pressed(KeyCode::D) {
-            vel.0.x += 1.0;
-            *dir = Direction::Right;
+            dir.right();
         }
         if keys.pressed(KeyCode::W) {
-            vel.0.y += 1.0;
-            *dir = Direction::Up;
+            dir.up();
         }
         if keys.pressed(KeyCode::S) {
-            vel.0.y -= 1.0;
-            *dir = Direction::Down;
+            dir.down();
         }
 
-        if vel.0.magnitude() > 0.0 {
-            vel.0 = vel.0.normalize();
-        }
-        vel.0 *= speed.0;
+        *vel = dir.normalized_velocity(speed);
     }
 }
 
 fn player_keyboard_action(
-    mut commands: &mut Commands,
+    mut commands: Commands,
     keys: Res<Input<KeyCode>>,
     mut query: Query<Entity, With<KeyboardControl>>,
 ) {
     for entity in query.iter() {
-        if keys.pressed(KeyCode::Space) {
+        if keys.just_pressed(KeyCode::Space) {
             commands.entity(entity).insert(ActionRequested);
         }
     }
 }
 
-fn warden_actions(query: Query<&Position, With<(ActionRequested, Warden)>>) {}
+fn warden_actions(
+    mut commands: Commands,
+    wardens: Query<(Entity, &Position, &Direction), (With<Warden>, With<ActionRequested>)>,
+    mut doors: Query<(Entity, &GridPosition, &mut Door, &mut Visible)>,
+) {
+    for (warden_ent, warden_pos, warden_dir) in wardens.iter() {
+        info!("warden at {:?}", warden_pos.nearest_cell() + warden_dir);
+        let forward_pos = warden_pos.nearest_cell() + warden_dir;
+        for (door_ent, door_grid_pos, mut door, mut visible) in doors.iter_mut() {
+            if &forward_pos != door_grid_pos {
+                continue;
+            }
+            info!("Door opened?!");
+            commands.entity(warden_ent).remove::<ActionRequested>();
+
+            visible.is_visible = false;
+            commands
+                .entity(door_ent)
+                .remove::<NonWalkable>()
+                .insert(Walkable);
+        }
+    }
+}
 
 fn prisoner_escape(
     mut commands: Commands,
@@ -340,7 +348,7 @@ fn prisoner_escape(
             info!("found path {:?}", found);
             commands.entity(entity).insert(Path::new(steps));
         } else {
-            info!("no path found!");
+            // info!("no path found!");
         }
     }
 }
