@@ -1,0 +1,13 @@
+<html>
+<head>
+<title>Please Don't Escape</title>
+</head>
+<body>
+<script type="module">
+  import init from "./please_dont_escape.js";
+  init("./please_dont_escape_bg.wasm").then(function (wasm) {
+    wasm.run();
+  });
+</script>
+</body>
+</html>

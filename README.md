@@ -2,6 +2,18 @@
 
 A game written as an entry to the [Rusty Jam](https://itch.io/jam/rusty-jam).
 
+## Install
+
+Rough notes on installation.
+
+## WASM
+
+```bash
+# $env:OPENSSL_NO_VENDOR = "1"  # if getting a failed to run custom build command for openssl-sys when installing wasm-pack
+cargo install wasm-pack
+wasm-pack build --target web --release
+```
+
 ## License
 
 Licensed under either of
