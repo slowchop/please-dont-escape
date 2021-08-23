@@ -1,6 +1,6 @@
-use crate::game::{Cell, Position};
 use bevy::ecs::prelude::{Added, Or, Query, ResMut};
 use pathfinding::prelude::astar;
+use crate::position::{GridPosition, Position};
 
 /// Specific cells that can be walked on. This should be added when NonWalkable was removed.
 #[derive(Debug)]
@@ -11,7 +11,7 @@ pub struct NonWalkable;
 
 #[derive(Debug)]
 pub struct Map {
-    walkable_cells: bevy::utils::HashMap<Cell, bool>,
+    walkable_cells: bevy::utils::HashMap<GridPosition, bool>,
 }
 
 impl Map {
@@ -26,22 +26,22 @@ impl Map {
     }
 
     /// Outside the map is not walkable.
-    fn is_walkable_cell(&self, cell: &Cell) -> bool {
+    fn is_walkable_cell(&self, cell: &GridPosition) -> bool {
         *self.walkable_cells.get(&cell).unwrap_or(&false)
     }
 
-    pub fn walkable_neighbours(&self, cell: &Cell) -> Vec<Cell> {
-        Cell::four_directions()
+    pub fn walkable_neighbours(&self, cell: &GridPosition) -> Vec<GridPosition> {
+        GridPosition::four_directions()
             .iter()
             .map(|c| cell + c)
             .filter(|c| self.is_walkable_cell(&c))
             .collect()
     }
 
-    pub fn find_path(&self, src: &Cell, dst: &Cell) -> Option<(Vec<Cell>, i32)> {
+    pub fn find_path(&self, src: &GridPosition, dst: &GridPosition) -> Option<(Vec<GridPosition>, i32)> {
         astar(
             src,
-            |cell: &Cell| {
+            |cell: &GridPosition| {
                 self.walkable_neighbours(cell)
                     .into_iter()
                     .map(|d| (d, 1i32))
@@ -59,7 +59,7 @@ impl Map {
 pub fn update_map_with_walkables(
     mut map: ResMut<Map>,
     query: Query<
-        (&Cell, Option<&NonWalkable>, Option<&Walkable>),
+        (&GridPosition, Option<&NonWalkable>, Option<&Walkable>),
         Or<(Added<NonWalkable>, Added<Walkable>)>,
     >,
 ) {

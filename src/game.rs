@@ -1,5 +1,9 @@
 use crate::input::exit_on_escape_key;
 use crate::map::{update_map_with_walkables, Map, NonWalkable, Walkable};
+use crate::position::{
+    apply_velocity, check_velocity_collisions, sync_sprite_positions, GridPosition, Position,
+    Velocity,
+};
 use crate::AppState;
 use bevy::core::FixedTimestep;
 use bevy::prelude::*;
@@ -8,7 +12,7 @@ use nalgebra::Vector2;
 use rand::{thread_rng, Rng};
 use std::ops::{Add, Deref, Sub};
 
-const CELL_SIZE: f32 = 32.0;
+pub const CELL_SIZE: f32 = 32.0;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, StageLabel)]
 struct FixedUpdateStage;
@@ -31,8 +35,7 @@ impl Plugin for Game {
                     .with_system(setup.system().label(Label::Setup)),
             )
             .add_system_set(
-                SystemSet::on_update(AppState::InGame)
-                    .with_system(exit_on_escape_key.system())
+                SystemSet::on_update(AppState::InGame).with_system(exit_on_escape_key.system()),
             )
             .add_stage_after(
                 CoreStage::Update,
@@ -40,7 +43,11 @@ impl Plugin for Game {
                 SystemStage::parallel()
                     // https://github.com/bevyengine/bevy/blob/latest/examples/ecs/fixed_timestep.rs
                     .with_run_criteria(FixedTimestep::step(1f64 / 60f64))
-                    .with_system(player_keyboard_movement.system().before(Label::CheckVelocityCollisions))
+                    .with_system(
+                        player_keyboard_movement
+                            .system()
+                            .before(Label::CheckVelocityCollisions),
+                    )
                     .with_system(chase_camera.system())
                     .with_system(
                         move_along_path
@@ -65,125 +72,25 @@ impl Plugin for Game {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct Cell(pub Vector2<i32>);
-
-impl Cell {
-    fn new(x: i32, y: i32) -> Self {
-        Self(Vector2::new(x, y))
-    }
-
-    pub fn four_directions() -> Vec<Self> {
-        vec![
-            Cell::new(0, 1),
-            Cell::new(0, -1),
-            Cell::new(1, 0),
-            Cell::new(-1, 0),
-        ]
-    }
-}
-
-impl Add for &Cell {
-    type Output = Cell;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut c = self.clone();
-        c.0 += rhs.0;
-        c
-    }
-}
-
-impl Sub for &Cell {
-    type Output = Cell;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        let mut c = self.clone();
-        c.0 -= rhs.0;
-        c
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Position(Vector2<f64>);
-
-impl Position {
-    fn new(x: f64, y: f64) -> Self {
-        Self(Vector2::new(x, y))
-    }
-
-    pub fn nearest_cell(&self) -> Cell {
-        Cell::new(self.0.x.round() as i32, self.0.y.round() as i32)
-    }
-
-    pub fn to_transform(&self) -> Transform {
-        Transform::from_xyz(
-            self.0.x.clone() as f32 * CELL_SIZE,
-            self.0.y.clone() as f32 * CELL_SIZE,
-            0.0,
-        )
-    }
-}
-
-impl From<&Cell> for Position {
-    fn from(cell: &Cell) -> Self {
-        Position::new(cell.clone().0.x as f64, cell.clone().0.y as f64)
-    }
-}
-
-impl From<Vector2<f64>> for Position {
-    fn from(v: Vector2<f64>) -> Self {
-        Self(v)
-    }
-}
-
-impl Sub for &Position {
-    type Output = Position;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        (self.0 - rhs.0).into()
-    }
-}
-
-impl Sub for Position {
-    type Output = Position;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        (self.0 - rhs.0).into()
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Velocity(Vector2<f64>);
-
-impl Velocity {
-    fn new(x: f64, y: f64) -> Self {
-        Self(Vector2::new(x, y))
-    }
-
-    fn zero() -> Self {
-        Self::new(0.0, 0.0)
-    }
-}
-
 #[derive(Debug)]
 struct Path {
-    cells: Vec<Cell>,
+    cells: Vec<GridPosition>,
     current: usize,
 }
 
 impl Path {
-    fn new(cells: &[Cell]) -> Self {
+    fn new(cells: &[GridPosition]) -> Self {
         Self {
             cells: cells.into(),
             current: 0,
         }
     }
 
-    fn target(&self) -> &Cell {
+    fn target(&self) -> &GridPosition {
         &self.cells[self.current]
     }
 
-    fn next(&mut self) -> Option<&Cell> {
+    fn next(&mut self) -> Option<&GridPosition> {
         let next_idx = self.current + 1;
         if self.cells.len() == next_idx {
             None
@@ -220,7 +127,8 @@ struct Warden;
 #[derive(Debug)]
 struct Prisoner;
 
-/// It's the area of a prisoner's cell.
+/// It's the area of a prisoner's room. It is used to know what is outside room room or not.
+/// It's called `room` not cell because [Cell] is the name used as a snapped position.
 #[derive(Debug)]
 struct PrisonRoom;
 
@@ -269,7 +177,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
     let exit = materials.add(asset_server.load("cells/exit.png").into());
     let prison_door = materials.add(asset_server.load("cells/prison-door.png").into());
 
-    let mut cell = Cell::new(0, 0);
+    let mut cell = GridPosition::new(0, 0);
     for line in text_map.split("\n") {
         cell.0.x = 0;
         cell.0.y -= 1;
@@ -334,7 +242,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
     }
 }
 
-fn sprite(material: Handle<ColorMaterial>, cell: &Cell) -> SpriteBundle {
+fn sprite(material: Handle<ColorMaterial>, cell: &GridPosition) -> SpriteBundle {
     SpriteBundle {
         material,
         transform: Position::from(cell).to_transform(),
@@ -388,7 +296,6 @@ fn player_keyboard_movement(
             vel.0 = vel.0.normalize();
         }
         vel.0 *= speed.0;
-
     }
 }
 
@@ -399,7 +306,7 @@ fn player_keyboard_action(
 ) {
     for (ent, _) in query.iter_mut() {
         if keys.pressed(KeyCode::Space) {
-
+            debug!("space");
         }
     }
 }
@@ -422,45 +329,11 @@ fn move_along_path(mut query: Query<(&mut Velocity, &mut Path, &Position, &Speed
     }
 }
 
-fn check_velocity_collisions(map: Res<Map>, mut query: Query<(&Position, &mut Velocity)>) {
-    let map: &Map = map.deref();
-    for (pos, mut vel) in query.iter_mut() {
-        if !map.is_walkable_pos(&Position::from(pos.0 + vel.0)) {
-            // Allow "sliding" on the wall.
-            let mut v_vel = vel.clone();
-            v_vel.0.x = 0.0;
-            let mut h_vel = vel.clone();
-            h_vel.0.y = 0.0;
-            if map.is_walkable_pos(&Position::from(pos.0 + v_vel.0)) {
-                *vel = v_vel;
-            } else if map.is_walkable_pos(&Position::from(pos.0 + h_vel.0)) {
-                *vel = h_vel;
-            } else {
-                // Can't slide at all. Probably in a corner.
-                // TODO: Maybe trapped inside something that just spawned or closed.
-                *vel = Velocity::zero();
-            }
-        };
-    }
-}
-
-fn apply_velocity(mut query: Query<(&mut Position, &Velocity)>) {
-    for (mut pos, vel) in query.iter_mut() {
-        pos.0 += vel.0;
-    }
-}
-
-fn sync_sprite_positions(mut query: Query<(&Position, &mut Transform), Changed<Position>>) {
-    for (pos, mut transform) in query.iter_mut() {
-        *transform = pos.to_transform();
-    }
-}
-
 fn prisoner_escape(
     mut commands: Commands,
     map: Res<Map>,
     query: Query<(Entity, &Prisoner, &Position), Without<Path>>,
-    exits: Query<(&Exit, &Cell)>,
+    exits: Query<(&Exit, &GridPosition)>,
 ) {
     let exit_cell = exits.iter().next();
     if exit_cell.is_none() {
