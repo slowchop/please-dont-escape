@@ -295,9 +295,9 @@ fn check_velocity_collisions(map: Res<Map>, mut query: Query<(&Position, &mut Ve
     for (pos, mut vel) in query.iter_mut() {
         let new_pos = Position::from(pos.0 + vel.0);
         let cell = new_pos.nearest_cell();
-        let walkable_cell = map.walkable_cells.get(&cell);
         let is_walkable = map.walkable_cells.get(&cell).unwrap_or(&false);
         if !is_walkable {
+            // TODO: Allow velocity to slide against wall...
             *vel = Velocity::zero();
         };
     }
