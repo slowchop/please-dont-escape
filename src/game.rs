@@ -8,6 +8,7 @@ use nalgebra::Vector2;
 use pathfinding::prelude::astar;
 use std::collections::HashMap;
 use std::ops::{Add, Deref, Sub};
+use rand::{thread_rng, Rng};
 
 const CELL_SIZE: f32 = 32.0;
 
@@ -17,7 +18,6 @@ struct FixedUpdateStage;
 #[derive(Clone, Hash, Debug, PartialEq, Eq, SystemLabel)]
 enum Label {
     Setup,
-    PlayerInput,
     CheckVelocityCollisions,
     ApplyVelocity,
 }
@@ -41,11 +41,15 @@ impl Plugin for Game {
                 SystemStage::parallel()
                     // https://github.com/bevyengine/bevy/blob/latest/examples/ecs/fixed_timestep.rs
                     .with_run_criteria(FixedTimestep::step(1f64 / 60f64))
-                    .with_system(player_input.system().label(Label::PlayerInput))
+                    .with_system(player_input.system().before(Label::CheckVelocityCollisions))
+                    .with_system(
+                        move_along_path
+                            .system()
+                            .before(Label::CheckVelocityCollisions),
+                    )
                     .with_system(
                         check_velocity_collisions
                             .system()
-                            .after(Label::PlayerInput)
                             .label(Label::CheckVelocityCollisions),
                     )
                     .with_system(
@@ -124,6 +128,22 @@ impl From<Vector2<f64>> for Position {
     }
 }
 
+impl Sub for &Position {
+    type Output = Position;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        (self.0 - rhs.0).into()
+    }
+}
+
+impl Sub for Position {
+    type Output = Position;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        (self.0 - rhs.0).into()
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Velocity(Vector2<f64>);
 
@@ -138,7 +158,33 @@ impl Velocity {
 }
 
 #[derive(Debug)]
-struct Path(Vec<Cell>);
+struct Path {
+    cells: Vec<Cell>,
+    current: usize,
+}
+
+impl Path {
+    fn new(cells: &[Cell]) -> Self {
+        Self {
+            cells: cells.into(),
+            current: 0,
+        }
+    }
+
+    fn target(&self) -> &Cell {
+        &self.cells[self.current]
+    }
+
+    fn next(&mut self) -> Option<&Cell> {
+        let next_idx = self.current + 1;
+        if self.cells.len() == next_idx {
+            None
+        } else {
+            self.current = next_idx;
+            Some(self.target())
+        }
+    }
+}
 
 #[derive(Debug)]
 struct Speed(f64);
@@ -148,21 +194,14 @@ impl Speed {
         Self(speed)
     }
 
-    fn person() -> Self {
+    fn good_guy() -> Self {
         Self::new(0.1)
     }
-}
 
-// #[derive(Debug)]
-// struct MapGraph {
-//     nodes: Vec<Cell>,
-// }
-//
-// #[derive(Debug)]
-// struct MapNode {
-//     cost: u8,
-//     neighbours: Vec<Cell>,
-// }
+    fn bad_guy() -> Self {
+        Self::new(0.04 + thread_rng().gen_range(0.0..0.02))
+    }
+}
 
 #[derive(Debug)]
 struct KeyboardControl;
@@ -232,7 +271,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                         .insert(Position::from(&cell))
                         .insert(Velocity::zero())
                         .insert(Warden)
-                        .insert(Speed::person())
+                        .insert(Speed::good_guy())
                         .insert(KeyboardControl);
                 }
                 'p' => {
@@ -241,7 +280,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                         .insert(Position::from(&cell))
                         .insert(Velocity::zero())
                         .insert(Prisoner)
-                        .insert(Speed::person());
+                        .insert(Speed::bad_guy());
                 }
                 'o' => {
                     commands
@@ -305,6 +344,26 @@ fn player_input(
     }
 }
 
+fn move_along_path(mut query: Query<(&mut Velocity, &mut Path, &Position, &Speed)>) {
+    for (mut vel, mut path, pos, speed) in query.iter_mut() {
+        let target: Position = path.target().into();
+        let pos: &Position = pos;
+        let diff = target - pos.clone();
+        debug!("{:?}", diff);
+
+        let remaining = diff.0.magnitude_squared();
+
+        if remaining < 0.1 {
+            let next_target = path.next();
+            if next_target.is_none() {
+                // TODO: Remove Path
+            }
+        } else {
+            *vel.0 = *(diff.0.normalize() * speed.0);
+        }
+    }
+}
+
 fn check_velocity_collisions(map: Res<Map>, mut query: Query<(&Position, &mut Velocity)>) {
     let map: &Map = map.deref();
     for (pos, mut vel) in query.iter_mut() {
@@ -357,9 +416,11 @@ fn prisoner_escape(
     let (_, exit_cell) = exit_cell.unwrap();
     for (entity, prisoner, pos) in query.iter() {
         let found = map.find_path(&pos.nearest_cell(), &exit_cell);
-
-        let cell = pos.nearest_cell();
-        info!("found path {:?}", found);
-        commands.entity(entity).insert(Path(vec![]));
+        if let Some((ref steps, _)) = found {
+            info!("found path {:?}", found);
+            commands.entity(entity).insert(Path::new(steps));
+        } else {
+            info!("no path found!");
+        }
     }
 }

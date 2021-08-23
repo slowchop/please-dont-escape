@@ -2745,6 +2745,7 @@ dependencies = [
  "bevy_egui",
  "nalgebra",
  "pathfinding",
+ "rand",
 ]
 
 [[package]]
