@@ -402,20 +402,24 @@ fn prisoner_escape(
     query: Query<(Entity, &Prisoner, &Position), Without<Path>>,
     exits: Query<(&Exit, &Cell)>,
 ) {
-    let (_, exit_cell) = exits.iter().next().unwrap();
+    let exit_cell = exits.iter().next();
+    if exit_cell.is_none() {
+println!("no exit");
+return;
+}
+	let (_, exit_cell) = exit_cell.unwrap();
     for (entity, prisoner, pos) in query.iter() {
         let cell = pos.nearest_cell();
         let found = astar(
             &cell,
-            |cell: &Cell| map.walkable_neighbours(cell).iter().map(|d| (d, 1)),
-            // |cell: &Cell| vec![],
-            |c: &Cell| {
+            |cell: &Cell| map.walkable_neighbours(cell).into_iter().map(|d| (d, 1)),
+            |c| {
                 let diff = c.0 - exit_cell.0;
                 diff.x.abs() + diff.y.abs()
             },
             |c| c == exit_cell,
         );
-        info!("entity {:?}", entity);
+        info!("found path {:?}", found);
         commands.entity(entity).insert(Path(vec![]));
     }
 }
