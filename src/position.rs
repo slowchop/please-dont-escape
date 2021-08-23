@@ -43,6 +43,14 @@ impl Sub for &GridPosition {
     }
 }
 
+impl Add<&Direction> for GridPosition {
+    type Output = GridPosition;
+
+    fn add(self, rhs: &Direction) -> Self::Output {
+        todo!()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Position(pub Vector2<f64>);
 
@@ -90,6 +98,14 @@ impl Sub for Position {
     fn sub(self, rhs: Self) -> Self::Output {
         (self.0 - rhs.0).into()
     }
+}
+
+pub enum Direction {
+    None,
+    Left,
+    Right,
+    Up,
+    Down,
 }
 
 #[derive(Debug, Clone)]

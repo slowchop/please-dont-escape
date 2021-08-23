@@ -1,19 +1,19 @@
-use std::ops::{Add, Deref, Sub};
-
+use crate::input::exit_on_escape_key;
+use crate::map::{update_map_with_walkables, Map, NonWalkable, Walkable};
+use crate::path::Path;
+use crate::position::{
+    apply_velocity, check_velocity_collisions, sync_sprite_positions, Direction, GridPosition,
+    Position, Velocity,
+};
+use crate::{path, AppState};
 use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 use bevy::render::camera::Camera;
+use bevy_egui::egui::FontDefinitions;
+use bevy_egui::{egui, EguiContext};
 use nalgebra::Vector2;
-use rand::{Rng, thread_rng};
-
-use crate::{AppState, path};
-use crate::input::exit_on_escape_key;
-use crate::map::{Map, NonWalkable, update_map_with_walkables, Walkable};
-use crate::path::Path;
-use crate::position::{
-    apply_velocity, check_velocity_collisions, GridPosition, Position, sync_sprite_positions,
-    Velocity,
-};
+use rand::{thread_rng, Rng};
+use std::ops::{Add, Deref, Sub};
 
 pub const CELL_SIZE: f32 = 32.0;
 
@@ -38,7 +38,9 @@ impl Plugin for Game {
                     .with_system(setup.system().label(Label::Setup)),
             )
             .add_system_set(
-                SystemSet::on_update(AppState::InGame).with_system(exit_on_escape_key.system()),
+                SystemSet::on_update(AppState::InGame)
+                    .with_system(exit_on_escape_key.system())
+                    .with_system(ui.system()),
             )
             .add_stage_after(
                 CoreStage::Update,
@@ -101,6 +103,9 @@ struct Warden;
 #[derive(Debug)]
 struct Prisoner;
 
+#[derive(Debug)]
+struct ActionRequested;
+
 /// It's the area of a prisoner's room. It is used to know what is outside room room or not.
 /// It's called `room` not cell because [Cell] is the name used as a snapped position.
 #[derive(Debug)]
@@ -111,12 +116,19 @@ struct Exit;
 
 fn setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut egui_context: ResMut<EguiContext>,
+    asset_server: Res<AssetServer>,
 ) {
     let mut camera = OrthographicCameraBundle::new_2d();
     camera.transform.scale = Vec3::new(0.4, 0.4, 1.0);
     commands.spawn_bundle(camera);
+
+    let fonts = FontDefinitions::default();
+    egui_context.ctx().set_fonts(fonts);
+
+    let style: egui::Style = egui::Style::default();
+    egui_context.ctx().set_style(style);
 
     let text_map = "\
 oWowowxwowowowowowowowowowowowowowowowo o o o o>
@@ -167,6 +179,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                     commands
                         .spawn_bundle(sprite(warden.clone(), &cell))
                         .insert(Position::from(&cell))
+                        .insert(Direction::None)
                         .insert(Velocity::zero())
                         .insert(Warden)
                         .insert(Speed::good_guy())
@@ -216,6 +229,24 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
     }
 }
 
+fn ui(
+    egui_context: ResMut<EguiContext>,
+    wardens: Query<&Position, With<Warden>>,
+    prisoners: Query<&Position, With<Prisoner>>,
+) {
+    egui::Window::new("Debug").show(egui_context.ctx(), |ui| {
+        for pos in wardens.iter() {
+            ui.heading("Warden");
+            ui.label(format!("{:?}", pos));
+        }
+
+        for pos in prisoners.iter() {
+            ui.heading("Prisoner");
+            ui.label(format!("{:?}", pos));
+        }
+    });
+}
+
 fn sprite(material: Handle<ColorMaterial>, cell: &GridPosition) -> SpriteBundle {
     SpriteBundle {
         material,
@@ -247,23 +278,27 @@ fn chase_camera(
 
 fn player_keyboard_movement(
     keys: Res<Input<KeyCode>>,
-    mut query: Query<(&mut Velocity, &Speed), With<KeyboardControl>>,
+    mut query: Query<(&mut Velocity, &mut Direction, &Speed), With<KeyboardControl>>,
 ) {
-    for (mut vel, speed) in query.iter_mut() {
+    for (mut vel, mut dir, speed) in query.iter_mut() {
         vel.0.x = 0.0;
         vel.0.y = 0.0;
 
         if keys.pressed(KeyCode::A) {
             vel.0.x -= 1.0;
+            *dir = Direction::Left;
         }
         if keys.pressed(KeyCode::D) {
             vel.0.x += 1.0;
+            *dir = Direction::Right;
         }
         if keys.pressed(KeyCode::W) {
             vel.0.y += 1.0;
+            *dir = Direction::Up;
         }
         if keys.pressed(KeyCode::S) {
             vel.0.y -= 1.0;
+            *dir = Direction::Down;
         }
 
         if vel.0.magnitude() > 0.0 {
@@ -274,16 +309,18 @@ fn player_keyboard_movement(
 }
 
 fn player_keyboard_action(
+    mut commands: &mut Commands,
     keys: Res<Input<KeyCode>>,
-    map: Res<Map>,
-    mut query: Query<(Entity, &KeyboardControl)>,
+    mut query: Query<Entity, With<KeyboardControl>>,
 ) {
-    for (ent, _) in query.iter_mut() {
+    for entity in query.iter() {
         if keys.pressed(KeyCode::Space) {
-            debug!("space");
+            commands.entity(entity).insert(ActionRequested);
         }
     }
 }
+
+fn warden_actions(query: Query<&Position, With<(ActionRequested, Warden)>>) {}
 
 fn prisoner_escape(
     mut commands: Commands,

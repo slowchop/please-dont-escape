@@ -1,6 +1,6 @@
-use bevy::ecs::prelude::{Added, Or, Query, ResMut};
-use pathfinding::prelude::astar;
 use crate::position::{GridPosition, Position};
+use bevy::prelude::*;
+use pathfinding::prelude::astar;
 
 /// Specific cells that can be walked on. This should be added when NonWalkable was removed.
 #[derive(Debug)]
@@ -38,7 +38,11 @@ impl Map {
             .collect()
     }
 
-    pub fn find_path(&self, src: &GridPosition, dst: &GridPosition) -> Option<(Vec<GridPosition>, i32)> {
+    pub fn find_path(
+        &self,
+        src: &GridPosition,
+        dst: &GridPosition,
+    ) -> Option<(Vec<GridPosition>, i32)> {
         astar(
             src,
             |cell: &GridPosition| {
