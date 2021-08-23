@@ -4,8 +4,9 @@ use bevy::core::{FixedTimestep, FixedTimesteps};
 use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
 use nalgebra::Vector2;
-use std::collections::HashMap;
 use pathfinding::prelude::astar;
+use std::collections::HashMap;
+use std::ops::{Add, Sub, Deref};
 
 const CELL_SIZE: f32 = 32.0;
 
@@ -65,6 +66,35 @@ struct Cell(Vector2<i32>);
 impl Cell {
     fn new(x: i32, y: i32) -> Self {
         Self(Vector2::new(x, y))
+    }
+
+    fn four_directions() -> Vec<Self> {
+        vec![
+            Cell::new(0, 1),
+            Cell::new(0, -1),
+            Cell::new(1, 0),
+            Cell::new(-1, 0),
+        ]
+    }
+}
+
+impl Add for &Cell {
+    type Output = Cell;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut c = self.clone();
+        c.0 += rhs.0;
+        c
+    }
+}
+
+impl Sub for &Cell {
+    type Output = Cell;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut c = self.clone();
+        c.0 -= rhs.0;
+        c
     }
 }
 
@@ -140,18 +170,35 @@ impl Map {
             walkable_cells: bevy::utils::HashMap::default(),
         }
     }
+
+    fn is_walkable_pos(&self, pos: &Position) -> bool {
+        self.is_walkable_cell(&pos.nearest_cell())
+    }
+
+    /// Outside the map is not walkable.
+    fn is_walkable_cell(&self, cell: &Cell) -> bool {
+        *self.walkable_cells.get(&cell).unwrap_or(&false)
+    }
+
+    fn walkable_neighbours(&self, cell: &Cell) -> Vec<Cell> {
+        Cell::four_directions()
+            .iter()
+            .map(|c| cell + c)
+            .filter(|c| self.is_walkable_cell(&c))
+            .collect()
+    }
 }
 
-#[derive(Debug)]
-struct MapGraph {
-    nodes: Vec<Cell>,
-}
-
-#[derive(Debug)]
-struct MapNode {
-    cost: u8,
-    neighbours: Vec<Cell>,
-}
+// #[derive(Debug)]
+// struct MapGraph {
+//     nodes: Vec<Cell>,
+// }
+//
+// #[derive(Debug)]
+// struct MapNode {
+//     cost: u8,
+//     neighbours: Vec<Cell>,
+// }
 
 #[derive(Debug)]
 struct KeyboardControl;
@@ -295,16 +342,17 @@ fn player_input(
 }
 
 fn check_velocity_collisions(map: Res<Map>, mut query: Query<(&Position, &mut Velocity)>) {
+    let map: &Map = map.deref();
     for (pos, mut vel) in query.iter_mut() {
-        if !is_walkable(&map, &Position::from(pos.0 + vel.0)) {
+        if !map.is_walkable_pos(&Position::from(pos.0 + vel.0)) {
             // Allow "sliding" on the wall.
             let mut v_vel = vel.clone();
             v_vel.0.x = 0.0;
             let mut h_vel = vel.clone();
             h_vel.0.y = 0.0;
-            if is_walkable(&map, &Position::from(pos.0 + v_vel.0)) {
+            if map.is_walkable_pos(&Position::from(pos.0 + v_vel.0)) {
                 *vel = v_vel;
-            } else if is_walkable(&map, &Position::from(pos.0 + h_vel.0)) {
+            } else if map.is_walkable_pos(&Position::from(pos.0 + h_vel.0)) {
                 *vel = h_vel;
             } else {
                 // Can't slide at all. Probably in a corner.
@@ -313,11 +361,6 @@ fn check_velocity_collisions(map: Res<Map>, mut query: Query<(&Position, &mut Ve
             }
         };
     }
-}
-
-fn is_walkable(map: &Map, pos: &Position) -> bool {
-    let cell = pos.nearest_cell();
-    *map.walkable_cells.get(&cell).unwrap_or(&false)
 }
 
 fn update_map_with_walkables(
@@ -353,11 +396,25 @@ fn sync_sprite_positions(mut query: Query<(&Position, &mut Transform), (Changed<
     }
 }
 
-fn prisoner_escape(mut commands: Commands, query: Query<(Entity, &Prisoner, &Position), Without<Path>>, exits: Query<(&Exit, &Cell)>) {
-    let exit = exits.iter().next().unwrap();
+fn prisoner_escape(
+    mut commands: Commands,
+    map: Res<Map>,
+    query: Query<(Entity, &Prisoner, &Position), Without<Path>>,
+    exits: Query<(&Exit, &Cell)>,
+) {
+    let (_, exit_cell) = exits.iter().next().unwrap();
     for (entity, prisoner, pos) in query.iter() {
         let cell = pos.nearest_cell();
-        // astar(cell, )
+        let found = astar(
+            &cell,
+            |cell: &Cell| map.walkable_neighbours(cell).iter().map(|d| (d, 1)),
+            // |cell: &Cell| vec![],
+            |c: &Cell| {
+                let diff = c.0 - exit_cell.0;
+                diff.x.abs() + diff.y.abs()
+            },
+            |c| c == exit_cell,
+        );
         info!("entity {:?}", entity);
         commands.entity(entity).insert(Path(vec![]));
     }
