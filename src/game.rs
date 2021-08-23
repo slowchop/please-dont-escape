@@ -399,7 +399,7 @@ fn player_keyboard_action(
 ) {
     for (ent, _) in query.iter_mut() {
         if keys.pressed(KeyCode::Space) {
-            
+
         }
     }
 }
