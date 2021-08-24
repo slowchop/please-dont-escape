@@ -12,9 +12,9 @@ use bevy::render::camera::Camera;
 use bevy_egui::egui::FontDefinitions;
 use bevy_egui::{egui, EguiContext};
 use nalgebra::Vector2;
+use rand::prelude::IteratorRandom;
 use rand::{thread_rng, Rng};
 use std::ops::{Add, Deref, Sub};
-use rand::prelude::IteratorRandom;
 
 pub const CELL_SIZE: f32 = 32.0;
 
@@ -78,10 +78,8 @@ impl Plugin for Game {
                     .with_system(sync_sprite_positions.system().after(Label::ApplyVelocity))
                     .with_system(update_map_with_walkables.system())
                     .with_system(prisoner_escape.system())
-                    // Actions
-                    .with_system(warden_door_actions.system().before(Label::ClearActions))
-                    .with_system(warden_escaping_prisoner_actions.system().before(Label::ClearActions))
-                    .with_system(clear_actions.system().label(Label::ClearActions))
+                    .with_system(warden_actions.system().before(Label::ClearActions))
+                    .with_system(clear_actions.system().label(Label::ClearActions)),
             );
     }
 }
@@ -96,14 +94,20 @@ struct Warden;
 struct Prisoner;
 
 #[derive(Debug)]
-struct Action;
+enum Action {
+    Pending,
+    Done,
+}
 
-/// It's the area of a prisoner's room. It is used to know what is outside room room or not.
+/// It's the area of a prisoner's room. It is used to know what is outside room or not.
 #[derive(Debug)]
 struct PrisonRoom;
 
 #[derive(Debug)]
 struct Escaping;
+
+#[derive(Debug)]
+struct SpawnPoint(pub GridPosition);
 
 #[derive(Debug)]
 enum Door {
@@ -136,9 +140,9 @@ o                                w   w        o.
 o                         o o o ow  owo o o   o.
 o o o o o                 o c c ow  owc p o   o.
 o                         o c c sw  swc c o   o.
-o   P   o                 o p t.o   o c t.o   o.
+o       o                 o p t.o   o c t.o   o.
 o       o                 o o o.o   o o o.o   o.
-o d d   o                      .         .    o.
+o d d   o                      .  P      .    o.
 o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
 ";
 
@@ -191,6 +195,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                         .insert(Position::from(&cell))
                         .insert(Velocity::zero())
                         .insert(Prisoner)
+                        .insert(SpawnPoint(cell.clone()))
                         .insert(Speed::bad_guy());
                     needs_cell = true;
                 }
@@ -311,18 +316,19 @@ fn player_keyboard_action(
 ) {
     for entity in query.iter() {
         if keys.just_pressed(KeyCode::Space) {
-            commands.entity(entity).insert(Action);
+            commands.entity(entity).insert(Action::Pending);
         }
     }
 }
 
-fn warden_door_actions(
+fn warden_actions(
     mut commands: Commands,
-    wardens: Query<(Entity, &Position, &Direction), (With<Warden>, With<Action>)>,
+    mut wardens: Query<(Entity, &Position, &Direction, &mut Action), With<Warden>>,
     mut doors: Query<(Entity, &GridPosition, &mut Door, &mut Visible)>,
+    prisoners: Query<(Entity, &Position, &SpawnPoint), (With<Prisoner>, With<Escaping>)>,
 ) {
-    for (warden_ent, warden_pos, warden_dir) in wardens.iter() {
-        commands.entity(warden_ent).remove::<Action>();
+    for (warden_ent, warden_pos, warden_dir, mut action) in wardens.iter_mut() {
+        *action = Action::Done;
         let forward_pos = warden_pos.nearest_cell() + warden_dir;
         for (door_ent, door_grid_pos, mut door, mut visible) in doors.iter_mut() {
             if &forward_pos != door_grid_pos {
@@ -350,6 +356,24 @@ fn warden_door_actions(
                 }
             }
         }
+
+        for (prisoner_ent, prisoner_pos, spawn_point) in prisoners.iter() {
+            let dist = warden_pos.distance_to(&prisoner_pos);
+            if dist > 1.5 {
+                continue;
+            }
+
+            *action = Action::Done;
+
+            // Temporarily just respawn them!
+            let new_pos: Position = spawn_point.0.into();
+            commands
+                .entity(prisoner_ent)
+                .insert(new_pos)
+                .insert(Velocity::zero())
+                .remove::<Escaping>()
+                .remove::<Path>();
+        }
     }
 }
 
@@ -357,22 +381,6 @@ fn clear_actions(mut commands: Commands, actions: Query<Entity, With<Action>>) {
     for entity in actions.iter() {
         info!("Clearing action for ent {:?}", entity);
         commands.entity(entity).remove::<Action>();
-    }
-}
-
-fn warden_escaping_prisoner_actions(
-    mut commands: Commands,
-    wardens: Query<(Entity, &Position, &Direction), (With<Warden>, With<Action>)>,
-    prisoners: Query<(Entity, &Position), (With<Prisoner>, With<Escaping>)>,
-) {
-    for (warden_ent, warden_pos, warden_dir) in wardens.iter() {
-        for (prisoner_ent, prisoner_pos) in prisoners.iter() {
-            let dist = warden_pos.distance_to(&prisoner_pos);
-            if dist > 1.5 {
-                continue;
-            }
-            info!("Close!!!");
-        }
     }
 }
 
@@ -394,7 +402,8 @@ fn prisoner_escape(
         let found = map.find_path(&pos.nearest_cell(), &exit_cell);
         if let Some((ref steps, _)) = found {
             info!("found path {:?}", found);
-            commands.entity(entity)
+            commands
+                .entity(entity)
                 .insert(Path::new(steps))
                 .insert(Escaping);
         } else {

@@ -6,7 +6,7 @@ use nalgebra::Vector2;
 use rand::{thread_rng, Rng};
 use std::ops::{Add, Deref, Sub};
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct GridPosition(pub Vector2<i32>);
 
 impl GridPosition {
@@ -84,6 +84,13 @@ impl Position {
 impl From<&GridPosition> for Position {
     fn from(cell: &GridPosition) -> Self {
         Position::new(cell.clone().0.x as f64, cell.clone().0.y as f64)
+    }
+}
+
+impl From<GridPosition> for Position {
+    fn from(cell: GridPosition) -> Self {
+        // Second clone not required since we're consuming it.
+        Position::new(cell.clone().0.x as f64, cell.0.y as f64)
     }
 }
 
