@@ -26,10 +26,7 @@ bevy = { version = "0.5" }
 bevy = { version = "0.5", default-features = false, features = ["bevy_winit", "render"] }
 bevy_webgl2 = "0.5"
 
-# https://stackoverflow.com/questions/64507718/why-does-wasm-opt-fail-in-wasm-pack-builds-when-generating-a-function-returning
-#[package.metadata.wasm-pack.profile.release]
-#wasm-opt = ["-Oz", "--enable-mutable-globals"]
-[target.'cfg(target_arch = "wasm32")'.profile.release]
+[profile.release]
 debug = false
 opt-level = 'z'
 lto = true
