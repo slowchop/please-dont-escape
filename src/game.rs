@@ -93,7 +93,7 @@ struct Warden;
 #[derive(Debug)]
 struct Prisoner;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Action {
     Pending,
     Done,
@@ -323,21 +323,20 @@ fn player_keyboard_action(
 
 fn warden_actions(
     mut commands: Commands,
-    mut wardens: Query<(Entity, &Position, &Direction, &mut Action), With<Warden>>,
+    mut wardens: Query<(&Position, &Direction, &mut Action), With<Warden>>,
     mut doors: Query<(Entity, &GridPosition, &mut Door, &mut Visible)>,
     prisoners: Query<(Entity, &Position, &SpawnPoint), (With<Prisoner>, With<Escaping>)>,
 ) {
-    for (warden_ent, warden_pos, warden_dir, mut action) in wardens.iter_mut() {
-        *action = Action::Done;
+    for (warden_pos, warden_dir, mut action) in wardens.iter_mut() {
         let forward_pos = warden_pos.nearest_cell() + warden_dir;
         for (door_ent, door_grid_pos, mut door, mut visible) in doors.iter_mut() {
             if &forward_pos != door_grid_pos {
                 continue;
             }
+            *action = Action::Done;
 
             match *door {
                 Door::Closed => {
-                    info!("Door opened");
                     visible.is_visible = false;
                     *door = Door::Open;
                     commands
@@ -346,7 +345,6 @@ fn warden_actions(
                         .insert(Walkable);
                 }
                 Door::Open => {
-                    info!("Door closed");
                     visible.is_visible = true;
                     *door = Door::Closed;
                     commands
@@ -357,13 +355,17 @@ fn warden_actions(
             }
         }
 
+        if action.deref() == &Action::Done {
+            continue;
+        }
+
         for (prisoner_ent, prisoner_pos, spawn_point) in prisoners.iter() {
             let dist = warden_pos.distance_to(&prisoner_pos);
             if dist > 1.5 {
                 continue;
             }
 
-            *action = Action::Done;
+            info!("prisoner action done!");
 
             // Temporarily just respawn them!
             let new_pos: Position = spawn_point.0.into();
@@ -401,7 +403,7 @@ fn prisoner_escape(
     for (entity, _prisoner, pos) in query.iter() {
         let found = map.find_path(&pos.nearest_cell(), &exit_cell);
         if let Some((ref steps, _)) = found {
-            info!("found path {:?}", found);
+            // info!("found path {:?}", found);
             commands
                 .entity(entity)
                 .insert(Path::new(steps))
