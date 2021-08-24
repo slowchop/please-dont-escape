@@ -68,6 +68,10 @@ impl Position {
         GridPosition::new(self.0.x.round() as i32, self.0.y.round() as i32)
     }
 
+    pub fn distance_to(&self, other: &Position) -> f64 {
+        (self.0 - other.0).magnitude()
+    }
+
     pub fn to_transform(&self) -> Transform {
         Transform::from_xyz(
             self.0.x.clone() as f32 * CELL_SIZE,

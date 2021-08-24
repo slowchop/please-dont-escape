@@ -14,6 +14,7 @@ use bevy_egui::{egui, EguiContext};
 use nalgebra::Vector2;
 use rand::{thread_rng, Rng};
 use std::ops::{Add, Deref, Sub};
+use rand::prelude::IteratorRandom;
 
 pub const CELL_SIZE: f32 = 32.0;
 
@@ -25,6 +26,7 @@ enum Label {
     Setup,
     CheckVelocityCollisions,
     ApplyVelocity,
+    ClearActions,
 }
 
 pub struct Game;
@@ -75,8 +77,11 @@ impl Plugin for Game {
                     )
                     .with_system(sync_sprite_positions.system().after(Label::ApplyVelocity))
                     .with_system(update_map_with_walkables.system())
-                    .with_system(warden_actions.system())
-                    .with_system(prisoner_escape.system()),
+                    .with_system(prisoner_escape.system())
+                    // Actions
+                    .with_system(warden_door_actions.system().before(Label::ClearActions))
+                    .with_system(warden_escaping_prisoner_actions.system().before(Label::ClearActions))
+                    .with_system(clear_actions.system().label(Label::ClearActions))
             );
     }
 }
@@ -91,11 +96,14 @@ struct Warden;
 struct Prisoner;
 
 #[derive(Debug)]
-struct ActionRequested;
+struct Action;
 
 /// It's the area of a prisoner's room. It is used to know what is outside room room or not.
 #[derive(Debug)]
 struct PrisonRoom;
+
+#[derive(Debug)]
+struct Escaping;
 
 #[derive(Debug)]
 enum Door {
@@ -303,18 +311,18 @@ fn player_keyboard_action(
 ) {
     for entity in query.iter() {
         if keys.just_pressed(KeyCode::Space) {
-            commands.entity(entity).insert(ActionRequested);
+            commands.entity(entity).insert(Action);
         }
     }
 }
 
-fn warden_actions(
+fn warden_door_actions(
     mut commands: Commands,
-    wardens: Query<(Entity, &Position, &Direction), (With<Warden>, With<ActionRequested>)>,
+    wardens: Query<(Entity, &Position, &Direction), (With<Warden>, With<Action>)>,
     mut doors: Query<(Entity, &GridPosition, &mut Door, &mut Visible)>,
 ) {
     for (warden_ent, warden_pos, warden_dir) in wardens.iter() {
-        commands.entity(warden_ent).remove::<ActionRequested>();
+        commands.entity(warden_ent).remove::<Action>();
         let forward_pos = warden_pos.nearest_cell() + warden_dir;
         for (door_ent, door_grid_pos, mut door, mut visible) in doors.iter_mut() {
             if &forward_pos != door_grid_pos {
@@ -345,15 +353,40 @@ fn warden_actions(
     }
 }
 
+fn clear_actions(mut commands: Commands, actions: Query<Entity, With<Action>>) {
+    for entity in actions.iter() {
+        info!("Clearing action for ent {:?}", entity);
+        commands.entity(entity).remove::<Action>();
+    }
+}
+
+fn warden_escaping_prisoner_actions(
+    mut commands: Commands,
+    wardens: Query<(Entity, &Position, &Direction), (With<Warden>, With<Action>)>,
+    prisoners: Query<(Entity, &Position), (With<Prisoner>, With<Escaping>)>,
+) {
+    for (warden_ent, warden_pos, warden_dir) in wardens.iter() {
+        for (prisoner_ent, prisoner_pos) in prisoners.iter() {
+            let dist = warden_pos.distance_to(&prisoner_pos);
+            if dist > 1.5 {
+                continue;
+            }
+            info!("Close!!!");
+        }
+    }
+}
+
 fn prisoner_escape(
     mut commands: Commands,
     map: Res<Map>,
     query: Query<(Entity, &Prisoner, &Position), Without<Path>>,
     exits: Query<(&Exit, &GridPosition)>,
 ) {
-    let exit_cell = exits.iter().next();
+    let mut rng = thread_rng();
+    let exit_cells = exits.iter().choose_multiple(&mut rng, 1);
+    let exit_cell = exit_cells.get(0);
     if exit_cell.is_none() {
-        println!("no exit");
+        warn!("No exits found!");
         return;
     }
     let (_, exit_cell) = exit_cell.unwrap();
@@ -361,7 +394,9 @@ fn prisoner_escape(
         let found = map.find_path(&pos.nearest_cell(), &exit_cell);
         if let Some((ref steps, _)) = found {
             info!("found path {:?}", found);
-            commands.entity(entity).insert(Path::new(steps));
+            commands.entity(entity)
+                .insert(Path::new(steps))
+                .insert(Escaping);
         } else {
             // info!("no path found!");
         }
