@@ -1,13 +1,14 @@
 <html>
 <head>
-<title>Please Don't Escape</title>
+    <title>Please Don't Escape</title>
 </head>
 <body>
 <script type="module">
-  import init from "./game.js";
-  init().then(function (wasm) {
-    wasm.run();
-  });
+    import init from "./game.js";
+
+    init().then(function (wasm) {
+        wasm.run();
+    });
 </script>
 </body>
 </html>
