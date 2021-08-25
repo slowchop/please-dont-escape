@@ -13,6 +13,7 @@ use std::fs::File;
 use std::io::Write;
 use std::ops::{Add, Deref};
 use std::path::PathBuf;
+use crate::game::CELL_SIZE;
 
 pub struct Editor;
 
@@ -140,7 +141,11 @@ fn camera_to_selection(
         let p = pos - size / 2.0;
         let world_pos = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
         eprintln!("World coords: {}/{}", world_pos.x, world_pos.y);
-        let pos = Transform::from_xyz(world_pos.x.clone(), world_pos.y.clone(), 0.0);
+        let mut pos = Transform::from_xyz(world_pos.x.clone(), world_pos.y.clone(), 0.0);
+
+        // Snap!
+        let snapped_pos = (pos.translation / CELL_SIZE).round() * CELL_SIZE;
+        pos.translation = snapped_pos;
 
         let selection = selections.single().expect("Wrong amount of selections.");
         commands.entity(selection).insert(pos);
