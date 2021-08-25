@@ -57,9 +57,9 @@ fn main_menu(
                 state.set(AppState::InGame).expect("Could not set state to InGame.");
             }
 
-            // if ui.button("Multiplayer").clicked() {
-            //     state.set(AppState::InGame);
-            // }
+            if ui.button("Editor").clicked() {
+                state.set(AppState::Editor).expect("Could not set state to Editor.");
+            }
 
             if ui.button("Exit").clicked() {
                 app_exit_events.send(AppExit);

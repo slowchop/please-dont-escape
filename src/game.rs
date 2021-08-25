@@ -41,7 +41,6 @@ impl Plugin for Game {
             )
             .add_system_set(
                 SystemSet::on_update(AppState::InGame)
-                    .with_system(exit_on_escape_key.system())
                     .with_system(ui.system())
                     // This is here because it uses `just_pressed` which will be skipped in the
                     // FixedUpdateStage.
@@ -118,6 +117,9 @@ enum Door {
 #[derive(Debug)]
 struct Exit;
 
+#[derive(Debug)]
+struct Wire;
+
 fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -139,11 +141,11 @@ oWowowxwowowowowowowowowowowowowowowowo o o o o>
 o                                w   w        o.
 o                         o o o ow  owo o o   o.
 o o o o o                 o c c ow  owc p o   o.
-o                         o c c sw  swc c o   o.
+o                         o c c sw  swc c o   x.
 o       o                 o p t.o   o c t.o   o.
 o       o                 o o o.o   o o o.o   o.
 o d d   o                      .  P      .    o.
-o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
+o o o o o x o o o o o o o o o o.o.o.o.o.o.o.o.o.
 ";
 
     /*
@@ -166,6 +168,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
     let wall = materials.add(asset_server.load("cells/wall.png").into());
     let exit = materials.add(asset_server.load("cells/exit.png").into());
     let prison_door = materials.add(asset_server.load("cells/prison-door.png").into());
+    let wire = materials.add(asset_server.load("cells/wire.png").into());
 
     let mut cell = GridPosition::new(0, 0);
     for line in text_map.split("\n") {
@@ -177,7 +180,7 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
             let mut needs_cell = false;
 
             let left = chunk[0];
-            let _right = chunk[1];
+            let right = chunk[1];
             match left {
                 'P' => {
                     commands
@@ -225,6 +228,15 @@ o o o o o x o o o o o o x o o o.o.o.o.o.o.o.o.o.
                 }
                 _ => {}
             };
+            match right {
+                'w' => {
+                    commands
+                        .spawn_bundle(sprite(wire.clone(), &cell))
+                        .insert(cell.clone())
+                        .insert(Wire);
+                }
+                _ => {}
+            }
             if needs_walkable {
                 commands.spawn().insert(cell.clone()).insert(Walkable);
             }

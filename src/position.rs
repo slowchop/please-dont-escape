@@ -5,8 +5,9 @@ use core::convert::From;
 use nalgebra::Vector2;
 use rand::{thread_rng, Rng};
 use std::ops::{Add, Deref, Sub};
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct GridPosition(pub Vector2<i32>);
 
 impl GridPosition {
@@ -21,6 +22,10 @@ impl GridPosition {
             GridPosition::new(1, 0),
             GridPosition::new(-1, 0),
         ]
+    }
+
+    pub fn zero() -> Self {
+        Self::new(0, 0)
     }
 }
 
@@ -56,7 +61,7 @@ impl Add<&Direction> for GridPosition {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Position(pub Vector2<f64>);
 
 impl Position {
