@@ -5,7 +5,7 @@ use bevy::input::mouse::MouseButtonInput;
 use bevy::prelude::*;
 use bevy::render::camera::Camera;
 use bevy::utils::StableHashMap;
-use bevy_egui::egui::{FontDefinitions, Ui};
+use bevy_egui::egui::{FontDefinitions, Ui, Align2};
 use bevy_egui::{egui, EguiContext};
 use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
@@ -26,6 +26,7 @@ impl Plugin for Editor {
             .insert_resource(UiFilename("level1".into()))
             .insert_resource(Mode::Add)
             .insert_resource(UiItem::Wall)
+            .insert_resource(SelectedItem::Nothing)
             //
             .add_system_set(SystemSet::on_enter(AppState::Editor).with_system(setup.system()))
             .add_system_set(
@@ -78,6 +79,7 @@ fn ui(
     mut mode: ResMut<Mode>,
     mut ui_item: ResMut<UiItem>,
     mut map: ResMut<Map>,
+    selected_item: Res<SelectedItem>,
 ) {
     egui::Window::new("Editor")
         .default_width(200.0)
@@ -132,6 +134,23 @@ fn ui(
                 select_item(ui, "Exit", &mut ui_item, UiItem::Exit);
                 select_item(ui, "Wire", &mut ui_item, UiItem::Wire);
             });
+
+            ui.separator();
+
+            ui.heading("Selected");
+            match &*selected_item {
+                SelectedItem::Nothing => {
+                    ui.label("Nothing selected");
+                }
+                SelectedItem::Item(item) => {
+                    ui.label(format!("{:#?}", item));
+                    if ui.button("Delete").clicked() {
+                        // Delete from scene
+                        asdf
+                        // Delete from map
+                    }
+                }
+            }
         });
 }
 
@@ -201,13 +220,19 @@ fn click_add(
     map.items.push(ui_item.into_item(&pos));
 }
 
+enum SelectedItem {
+    Nothing,
+    Item(Item),
+}
+
 fn click_select(
     button: Res<Input<MouseButton>>,
     map: Res<Map>,
     selection: Query<&Transform, With<Selection>>,
     mode: Res<Mode>,
     ui_item: Res<UiItem>,
-    // mut ui_items: Query<UiItem>
+    // mut ui_items: Query<UiItem>,
+    mut selected_item: ResMut<SelectedItem>,
 ) {
     if !button.just_pressed(MouseButton::Left) {
         return;
@@ -216,12 +241,10 @@ fn click_select(
         return;
     }
 
-    info!("click select");
     let pos: Position = (selection.single().unwrap().translation.truncate() / CELL_SIZE).into();
     let mut found = None;
     for item in &map.items {
         if item.position().distance_to(&pos) < 0.5 {
-            dbg!(item);
             if *mode == Mode::Select {
                 found = Some(item);
                 break;
@@ -235,6 +258,7 @@ fn click_select(
     }
     if let Some(found) = found {
         info!("found! {:?}", found);
+        *selected_item = SelectedItem::Item(found.clone());
     }
 }
 
@@ -344,7 +368,7 @@ impl UiItem {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 enum Item {
     Background(Background),
     Warden(GridPosition),
@@ -369,7 +393,7 @@ impl Item {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct Background {
     path: String,
     pos: Position,
