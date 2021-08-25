@@ -5,7 +5,7 @@ use bevy::input::mouse::MouseButtonInput;
 use bevy::prelude::*;
 use bevy::render::camera::Camera;
 use bevy::utils::StableHashMap;
-use bevy_egui::egui::{FontDefinitions, Ui, Align2};
+use bevy_egui::egui::{Align2, FontDefinitions, Ui};
 use bevy_egui::{egui, EguiContext};
 use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
@@ -80,6 +80,7 @@ fn ui(
     mut ui_item: ResMut<UiItem>,
     mut map: ResMut<Map>,
     selected_item: Res<SelectedItem>,
+    ui_items: Query<(Entity, &UiItem, &Transform)>,
 ) {
     egui::Window::new("Editor")
         .default_width(200.0)
@@ -145,8 +146,17 @@ fn ui(
                 SelectedItem::Item(item) => {
                     ui.label(format!("{:#?}", item));
                     if ui.button("Delete").clicked() {
+                        // let a = ui_items
+                        //     .iter()
+                        //     .filter(|(_, i, t)| {
+                        //         i.matches_item_variant(item)
+                        //             && t.translation.truncate().into() == item.position()
+                        //     })
+                        //     .next()
+                        //     .unwrap();
+                        // commands.entity(a).remove();
                         // Delete from scene
-                        asdf
+                        // asdf
                         // Delete from map
                     }
                 }
@@ -365,6 +375,11 @@ impl UiItem {
             UiItem::Warden => Item::Warden(grid_pos.clone()),
             _ => todo!(),
         }
+    }
+
+    pub fn matches_item_variant(&self, other: &Item) -> bool {
+        let i = self.clone().into_item(&GridPosition::zero());
+        variant_eq(&i, other)
     }
 }
 
