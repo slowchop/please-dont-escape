@@ -156,6 +156,7 @@ fn click_add(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
+    mut map: ResMut<Map>,
     button: Res<Input<MouseButton>>,
     ui_item: Res<UiItem>,
     mode: Res<Mode>,
@@ -174,7 +175,11 @@ fn click_add(
         material: handle,
         transform: transform.clone(),
         ..Default::default()
-    });
+    }).insert(ui_item.clone());
+
+    let pos = transform.clone().translation.truncate() / CELL_SIZE;
+    let pos = GridPosition::new(pos.x.clone() as i32, pos.y.clone() as i32);
+    map.items.push(ui_item.into_item(&pos));
 }
 
 fn drag_diff(
@@ -225,7 +230,7 @@ impl Map {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 enum UiItem {
     Background,
     Warden,
@@ -240,6 +245,13 @@ impl UiItem {
     pub fn path(&self) -> PathBuf {
         match self {
             UiItem::Wall => "cells/wall.png".into(),
+            _ => todo!(),
+        }
+    }
+
+    pub fn into_item(self, grid_pos: &GridPosition) -> Item {
+        match self {
+            UiItem::Wall => Item::Wall(grid_pos.clone()),
             _ => todo!(),
         }
     }
