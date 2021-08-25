@@ -27,6 +27,10 @@ impl GridPosition {
     pub fn zero() -> Self {
         Self::new(0, 0)
     }
+
+    pub fn to_position(&self) -> Position {
+        Position::new(self.0.x as f64, self.0.y as f64)
+    }
 }
 
 impl Add for &GridPosition {
@@ -102,6 +106,12 @@ impl From<GridPosition> for Position {
 impl From<Vector2<f64>> for Position {
     fn from(v: Vector2<f64>) -> Self {
         Self(v)
+    }
+}
+
+impl Into<Vec2> for Position {
+    fn into(self) -> Vec2 {
+        Vec2::new(self.0.x as f32, self.0.y as f32)
     }
 }
 

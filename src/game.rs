@@ -408,7 +408,7 @@ fn prisoner_escape(
     let exit_cells = exits.iter().choose_multiple(&mut rng, 1);
     let exit_cell = exit_cells.get(0);
     if exit_cell.is_none() {
-        warn!("No exits found!");
+        // warn!("No exits found!");
         return;
     }
     let (_, exit_cell) = exit_cell.unwrap();

@@ -1,3 +1,4 @@
+use crate::game::CELL_SIZE;
 use crate::position::{GridPosition, Position};
 use crate::AppState;
 use bevy::input::mouse::MouseButtonInput;
@@ -13,7 +14,6 @@ use std::fs::File;
 use std::io::Write;
 use std::ops::{Add, Deref};
 use std::path::PathBuf;
-use crate::game::CELL_SIZE;
 
 pub struct Editor;
 
@@ -69,7 +69,10 @@ fn setup(
 }
 
 fn ui(
+    mut commands: Commands,
     egui_context: ResMut<EguiContext>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
     mut ui_filename: ResMut<UiFilename>,
     mut mode: ResMut<Mode>,
     mut ui_item: ResMut<UiItem>,
@@ -86,11 +89,20 @@ fn ui(
             });
 
             ui.horizontal(|ui| {
-                if ui.button("Load").clicked() {};
+                let path = PathBuf::from(format!("assets/maps/{}.json", &ui_filename.0));
+                if ui.button("Load").clicked() {
+                    info!("Loading from {:?}", &path);
+                    let mut f = File::open(&path).expect("Could not open file for reading.");
+                    *map = serde_json::from_reader(f).expect("Could not read from file.");
+
+                    for item in &map.items {
+                        let pos = item.position().into();
+                        add_item(&mut commands, &mut materials, &asset_server, &pos, &*ui_item);
+                    }
+                };
                 if ui.button("Save").clicked() {
-                    let serialized = serde_json::to_vec(&*map).unwrap();
-                    let path = PathBuf::from(format!("assets/maps/{}.json", &ui_filename.0));
                     info!("Saving to {:?}", &path);
+                    let serialized = serde_json::to_vec_pretty(&*map).unwrap();
                     let mut f = File::create(&path).expect("Could not open file for writing.");
                     f.write_all(&serialized).expect("Could not write to file.");
                 }
@@ -140,7 +152,6 @@ fn camera_to_selection(
         let size = Vec2::new(window.width() as f32, window.height() as f32);
         let p = pos - size / 2.0;
         let world_pos = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
-        eprintln!("World coords: {}/{}", world_pos.x, world_pos.y);
         let mut pos = Transform::from_xyz(world_pos.x.clone(), world_pos.y.clone(), 0.0);
 
         // Snap!
@@ -170,20 +181,36 @@ fn click_add(
     }
 
     let transform = selection.single().unwrap();
-    let handle = materials.add(asset_server.load(ui_item.path()).into());
-    commands.spawn_bundle(SpriteBundle {
-        material: handle,
-        transform: transform.clone(),
-        ..Default::default()
-    }).insert(ui_item.clone());
-
+    add_item(
+        &mut commands,
+        &mut materials,
+        &asset_server,
+        &(transform.translation.truncate() / CELL_SIZE),
+        &*ui_item,
+    );
     let pos = transform.clone().translation.truncate() / CELL_SIZE;
     let pos = GridPosition::new(pos.x.clone() as i32, pos.y.clone() as i32);
     map.items.push(ui_item.into_item(&pos));
 }
 
+fn add_item(
+    mut commands: &mut Commands,
+    mut materials: &mut ResMut<Assets<ColorMaterial>>,
+    asset_server: &Res<AssetServer>,
+    pos: &Vec2,
+    ui_item: &UiItem,
+) {
+    let handle = materials.add(asset_server.load(ui_item.path()).into());
+    commands
+        .spawn_bundle(SpriteBundle {
+            material: handle,
+            transform: Transform::from_translation(pos.extend(0.0) * CELL_SIZE),
+            ..Default::default()
+        })
+        .insert(ui_item.clone());
+}
+
 fn drag_diff(
-    mut commands: Commands,
     mut last_pos: Local<Vec2>,
     selection: Query<&Transform, With<Selection>>,
     mut drag: ResMut<Drag>,
@@ -245,6 +272,11 @@ impl UiItem {
     pub fn path(&self) -> PathBuf {
         match self {
             UiItem::Wall => "cells/wall.png".into(),
+            UiItem::Door => "cells/door.png".into(),
+            UiItem::Exit => "cells/exit.png".into(),
+            UiItem::Wire => "cells/wire.png".into(),
+            UiItem::Prisoner => "chars/prisoner.png".into(),
+            UiItem::Warden => "chars/warden.png".into(),
             _ => todo!(),
         }
     }
@@ -252,6 +284,11 @@ impl UiItem {
     pub fn into_item(self, grid_pos: &GridPosition) -> Item {
         match self {
             UiItem::Wall => Item::Wall(grid_pos.clone()),
+            UiItem::Door => Item::Door(grid_pos.clone()),
+            UiItem::Exit => Item::Exit(grid_pos.clone()),
+            UiItem::Wire => Item::Wire(grid_pos.clone()),
+            UiItem::Prisoner => Item::Prisoner(grid_pos.clone()),
+            UiItem::Warden => Item::Warden(grid_pos.clone()),
             _ => todo!(),
         }
     }
@@ -266,6 +303,20 @@ enum Item {
     Door(GridPosition),
     Exit(GridPosition),
     Wire(GridPosition),
+}
+
+impl Item {
+    pub fn position(&self) -> Position {
+        match self {
+            Item::Background(Background { pos, .. }) => pos.clone(),
+            Item::Warden(p) => p.to_position(),
+            Item::Prisoner(p) => p.to_position(),
+            Item::Wall(p) => p.to_position(),
+            Item::Door(p) => p.to_position(),
+            Item::Exit(p) => p.to_position(),
+            Item::Wire(p) => p.to_position(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
