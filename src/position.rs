@@ -115,6 +115,12 @@ impl Into<Vec2> for Position {
     }
 }
 
+impl From<Vec2> for Position {
+    fn from(v: Vec2) -> Self {
+        Position::new(v.x as f64, v.y as f64)
+    }
+}
+
 impl Sub for &Position {
     type Output = Position;
 

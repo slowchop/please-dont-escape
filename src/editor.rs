@@ -33,6 +33,7 @@ impl Plugin for Editor {
                     .with_system(ui.system())
                     .with_system(camera_to_selection.system())
                     .with_system(click_add.system())
+                    .with_system(click_select.system())
                     .with_system(drag_diff.system())
                     .with_system(drag.system()),
             );
@@ -97,7 +98,13 @@ fn ui(
 
                     for item in &map.items {
                         let pos = item.position().into();
-                        add_item(&mut commands, &mut materials, &asset_server, &pos, &*ui_item);
+                        add_item(
+                            &mut commands,
+                            &mut materials,
+                            &asset_server,
+                            &pos,
+                            &*ui_item,
+                        );
                     }
                 };
                 if ui.button("Save").clicked() {
@@ -114,6 +121,7 @@ fn ui(
             ui.horizontal_wrapped(|ui| {
                 select_mode(ui, "Add", &mut mode, Mode::Add);
                 select_mode(ui, "Select", &mut mode, Mode::Select);
+                select_mode(ui, "Select Specific", &mut mode, Mode::SelectSpecific);
             });
             ui.heading("Item");
             ui.horizontal_wrapped(|ui| {
@@ -169,8 +177,8 @@ fn click_add(
     asset_server: Res<AssetServer>,
     mut map: ResMut<Map>,
     button: Res<Input<MouseButton>>,
-    ui_item: Res<UiItem>,
     mode: Res<Mode>,
+    ui_item: Res<UiItem>,
     selection: Query<&Transform, With<Selection>>,
 ) {
     if !button.just_pressed(MouseButton::Left) {
@@ -191,6 +199,47 @@ fn click_add(
     let pos = transform.clone().translation.truncate() / CELL_SIZE;
     let pos = GridPosition::new(pos.x.clone() as i32, pos.y.clone() as i32);
     map.items.push(ui_item.into_item(&pos));
+}
+
+fn click_select(
+    button: Res<Input<MouseButton>>,
+    map: Res<Map>,
+    selection: Query<&Transform, With<Selection>>,
+    mode: Res<Mode>,
+    ui_item: Res<UiItem>,
+    // mut ui_items: Query<UiItem>
+) {
+    if !button.just_pressed(MouseButton::Left) {
+        return;
+    }
+    if *mode != Mode::Select && *mode != Mode::SelectSpecific {
+        return;
+    }
+
+    info!("click select");
+    let pos: Position = (selection.single().unwrap().translation.truncate() / CELL_SIZE).into();
+    let mut found = None;
+    for item in &map.items {
+        if item.position().distance_to(&pos) < 0.5 {
+            dbg!(item);
+            if *mode == Mode::Select {
+                found = Some(item);
+                break;
+            } else {
+                if variant_eq(&ui_item.into_item(&GridPosition::zero()), item) {
+                    found = Some(item);
+                    break;
+                }
+            }
+        }
+    }
+    if let Some(found) = found {
+        info!("found! {:?}", found);
+    }
+}
+
+fn variant_eq<T>(a: &T, b: &T) -> bool {
+    std::mem::discriminant(a) == std::mem::discriminant(b)
 }
 
 fn add_item(
@@ -244,6 +293,7 @@ struct UiFilename(String);
 enum Mode {
     Add,
     Select,
+    SelectSpecific,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -294,7 +344,7 @@ impl UiItem {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 enum Item {
     Background(Background),
     Warden(GridPosition),
@@ -319,7 +369,7 @@ impl Item {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Background {
     path: String,
     pos: Position,
