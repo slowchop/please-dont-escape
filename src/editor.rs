@@ -1,6 +1,7 @@
 use crate::position::{GridPosition, Position};
 use crate::AppState;
 use bevy::prelude::*;
+use bevy::render::camera::Camera;
 use bevy::utils::StableHashMap;
 use bevy_egui::egui::{FontDefinitions, Ui};
 use bevy_egui::{egui, EguiContext};
@@ -25,17 +26,41 @@ impl Plugin for Editor {
             //
             .add_system_set(SystemSet::on_enter(AppState::Editor).with_system(setup.system()))
             .add_system_set(
-                SystemSet::on_update(AppState::Editor).with_system(ui.system()), // .with_system(player_keyboard_action.system()),
+                SystemSet::on_update(AppState::Editor)
+                    .with_system(ui.system())
+                    .with_system(camera_to_selection.system())
+                    .with_system(click.system()),
             );
     }
 }
 
-fn setup(mut egui_context: ResMut<EguiContext>) {
+struct Selection;
+
+fn setup(
+    mut commands: Commands,
+    mut egui_context: ResMut<EguiContext>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+) {
     let fonts = FontDefinitions::default();
     egui_context.ctx().set_fonts(fonts);
 
     let style: egui::Style = egui::Style::default();
     egui_context.ctx().set_style(style);
+
+    commands
+        .spawn()
+        .insert_bundle(OrthographicCameraBundle::new_2d());
+
+    let selection = materials.add(asset_server.load("cells/selection.png").into());
+    let grid_pos = GridPosition::zero();
+    commands
+        .spawn_bundle(SpriteBundle {
+            material: selection,
+            transform: Position::from(grid_pos).to_transform(),
+            ..Default::default()
+        })
+        .insert(Selection);
 }
 
 fn ui(
@@ -97,6 +122,31 @@ fn select_mode(ui: &mut Ui, title: &str, item: &mut ResMut<Mode>, new_item: Mode
         **item = new_item;
     };
 }
+
+fn camera_to_selection(
+    mut commands: Commands,
+    windows: Res<Windows>,
+    cameras: Query<&Transform, With<Camera>>,
+    selections: Query<Entity, With<Selection>>,
+) {
+    let camera_transform = cameras.single().expect("Wrong amount of cameras.");
+    let window = windows.get_primary().unwrap();
+    if let Some(pos) = window.cursor_position() {
+        let size = Vec2::new(window.width() as f32, window.height() as f32);
+        let p = pos - size / 2.0;
+        let world_pos = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
+        eprintln!("World coords: {}/{}", world_pos.x, world_pos.y);
+        // let mut selection = selections.single_mut()
+        let pos = Transform::from_xyz(world_pos.x.clone(), world_pos.y.clone(), 0.0);
+
+        let selection = selections.single().expect("Wrong amount of selections.");
+        commands.entity(selection).insert(pos);
+    }
+}
+
+fn move_selection() {}
+
+fn click() {}
 
 struct UiFilename(String);
 

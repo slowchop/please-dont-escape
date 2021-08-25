@@ -122,8 +122,8 @@ struct Wire;
 
 fn setup(
     mut commands: Commands,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     mut egui_context: ResMut<EguiContext>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
     let mut camera = OrthographicCameraBundle::new_2d();
