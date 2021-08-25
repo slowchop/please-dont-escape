@@ -1,5 +1,6 @@
 use crate::position::{GridPosition, Position};
 use crate::AppState;
+use bevy::input::mouse::MouseButtonInput;
 use bevy::prelude::*;
 use bevy::render::camera::Camera;
 use bevy::utils::StableHashMap;
@@ -10,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::to_vec;
 use std::fs::File;
 use std::io::Write;
-use std::ops::Deref;
+use std::ops::{Add, Deref};
 use std::path::PathBuf;
 
 pub struct Editor;
@@ -19,6 +20,7 @@ impl Plugin for Editor {
     fn build(&self, app: &mut AppBuilder) {
         app
             //
+            .insert_resource(Drag(Vec2::default()))
             .insert_resource(Map::new())
             .insert_resource(UiFilename("level1".into()))
             .insert_resource(Mode::Add)
@@ -29,7 +31,9 @@ impl Plugin for Editor {
                 SystemSet::on_update(AppState::Editor)
                     .with_system(ui.system())
                     .with_system(camera_to_selection.system())
-                    .with_system(click.system()),
+                    .with_system(click_add.system())
+                    .with_system(drag_diff.system())
+                    .with_system(drag.system()),
             );
     }
 }
@@ -136,7 +140,6 @@ fn camera_to_selection(
         let p = pos - size / 2.0;
         let world_pos = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
         eprintln!("World coords: {}/{}", world_pos.x, world_pos.y);
-        // let mut selection = selections.single_mut()
         let pos = Transform::from_xyz(world_pos.x.clone(), world_pos.y.clone(), 0.0);
 
         let selection = selections.single().expect("Wrong amount of selections.");
@@ -144,9 +147,59 @@ fn camera_to_selection(
     }
 }
 
-fn move_selection() {}
+fn click_add(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+    button: Res<Input<MouseButton>>,
+    ui_item: Res<UiItem>,
+    mode: Res<Mode>,
+    selection: Query<&Transform, With<Selection>>,
+) {
+    if !button.just_pressed(MouseButton::Left) {
+        return;
+    }
+    if *mode != Mode::Add {
+        return;
+    }
 
-fn click() {}
+    let transform = selection.single().unwrap();
+    let handle = materials.add(asset_server.load(ui_item.path()).into());
+    commands.spawn_bundle(SpriteBundle {
+        material: handle,
+        transform: transform.clone(),
+        ..Default::default()
+    });
+}
+
+fn drag_diff(
+    mut commands: Commands,
+    mut last_pos: Local<Vec2>,
+    selection: Query<&Transform, With<Selection>>,
+    mut drag: ResMut<Drag>,
+) {
+    let new_pos = selection.single().unwrap();
+    let drag_amount = *last_pos - new_pos.translation.truncate();
+    *drag = Drag(drag_amount);
+    *last_pos = new_pos.translation.truncate();
+}
+
+struct Drag(Vec2);
+
+fn drag(
+    button: Res<Input<MouseButton>>,
+    mut cameras: Query<&mut Transform, With<Camera>>,
+    drag: Res<Drag>,
+) {
+    if !button.pressed(MouseButton::Right) {
+        return;
+    }
+
+    let mut pos = cameras.single_mut().unwrap();
+    let diff = drag.0;
+    dbg!(&diff);
+    pos.translation += diff.extend(0.0);
+}
 
 struct UiFilename(String);
 
@@ -176,6 +229,15 @@ enum UiItem {
     Door,
     Exit,
     Wire,
+}
+
+impl UiItem {
+    pub fn path(&self) -> PathBuf {
+        match self {
+            UiItem::Wall => "cells/wall.png".into(),
+            _ => todo!(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
