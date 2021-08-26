@@ -629,6 +629,44 @@
           10
         ]
       }
+    },
+    {
+      "item": "Warden",
+      "pos": {
+        "Grid": [
+          -10,
+          6
+        ]
+      }
+    },
+    {
+      "item": "Prisoner",
+      "pos": {
+        "Grid": [
+          -9,
+          8
+        ]
+      }
+    },
+    {
+      "item": "Prisoner",
+      "pos": {
+        "Grid": [
+          -6,
+          8
+        ]
+      }
+    },
+    {
+      "item": {
+        "Background": "menus/logo.png"
+      },
+      "pos": {
+        "Grid": [
+          -37,
+          7
+        ]
+      }
     }
   ]
 }

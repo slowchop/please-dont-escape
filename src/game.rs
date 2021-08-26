@@ -9,6 +9,7 @@ use crate::{path, AppState};
 use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 use bevy::render::camera::Camera;
+use bevy::utils::HashMap;
 use bevy_egui::egui::FontDefinitions;
 use bevy_egui::{egui, EguiContext};
 use nalgebra::Vector2;
@@ -147,15 +148,46 @@ fn setup(
     let mut f = File::open("assets/maps/level1.json").expect("Could not open file for reading.");
     let map: Map = serde_json::from_reader(f).expect("Could not read from file.");
 
+    let mut min = GridPosition::zero();
+    let mut max = GridPosition::zero();
+    let mut first = false;
+    let mut items_added: HashMap<GridPosition, ()> = HashMap::default();
+
     for item_info in &map.items {
         let cell = item_info.pos.nearest_cell_grid_pos();
         let pos: Position = item_info.pos.into();
+        if first {
+            min = cell.clone();
+            max = cell.clone();
+            first = false;
+        } else {
+            if min.0.x > cell.0.x {
+                min.0.x = cell.0.x;
+            }
+            if min.0.y > cell.0.y {
+                min.0.y = cell.0.y;
+            }
+            if max.0.x < cell.0.x {
+                max.0.x = cell.0.x;
+            }
+            if max.0.y < cell.0.y {
+                max.0.y = cell.0.y;
+            }
+
+            dbg!(min, max);
+        }
+
+        items_added.insert(cell.clone(), ());
 
         let mut needs_walkable = true;
         let mut needs_cell = false;
 
-        match item_info.item {
-            Item::Background(_) => {}
+        match &item_info.item {
+            Item::Background(bg_path) => {
+                let asset: ColorMaterial = asset_server.load(bg_path.as_str()).into();
+                let bg = materials.add(asset);
+                commands.spawn_bundle(sprite(bg, &cell)).insert(pos);
+            }
             Item::Warden => {
                 commands
                     .spawn_bundle(sprite(warden.clone(), &cell))
@@ -166,84 +198,64 @@ fn setup(
                     .insert(Speed::good_guy())
                     .insert(KeyboardControl);
             }
-
-            Item::Prisoner => {}
-            Item::Wall => {
-                        commands
-                            .spawn_bundle(sprite(wall.clone(), &cell))
-                            .insert(cell.clone())
-                            .insert(NonWalkable);
-                needs_walkable = false;
-
+            Item::Prisoner => {
+                commands
+                    .spawn_bundle(sprite(prisoner.clone(), &cell))
+                    .insert(Position::from(&cell))
+                    .insert(Velocity::zero())
+                    .insert(Prisoner)
+                    .insert(SpawnPoint(cell.clone()))
+                    .insert(Speed::bad_guy());
+                needs_cell = true;
             }
-            Item::Door => {}
-            Item::Exit => {}
-            Item::Wire => {}
+            Item::Wall => {
+                commands
+                    .spawn_bundle(sprite(wall.clone(), &cell))
+                    .insert(cell.clone())
+                    .insert(NonWalkable);
+                needs_walkable = false;
+            }
+            Item::Door => {
+                commands
+                    .spawn_bundle(sprite(prison_door.clone(), &cell))
+                    .insert(cell.clone())
+                    .insert(Door::Closed)
+                    .insert(NonWalkable);
+                needs_walkable = false;
+            }
+            Item::Exit => {
+                commands
+                    .spawn_bundle(sprite(exit.clone(), &cell))
+                    .insert(cell.clone())
+                    .insert(Exit);
+            }
+            Item::Wire => {
+                commands
+                    .spawn_bundle(sprite(wire.clone(), &cell))
+                    .insert(cell.clone())
+                    .insert(Wire);
+            }
         };
 
         if needs_walkable {
             commands.spawn().insert(cell.clone()).insert(Walkable);
         }
-        // if needs_cell {
-        //     commands.spawn().insert(cell.clone()).insert(PrisonRoom);
-        // }
+        if needs_cell {
+            commands.spawn().insert(cell.clone()).insert(PrisonRoom);
+        }
+    }
 
-        // let left = chunk[0];
-        // let right = chunk[1];
-        // match left {
-        //     'P' => {
-        //     }
-        //     'p' => {
-        //         commands
-        //             .spawn_bundle(sprite(prisoner.clone(), &cell))
-        //             .insert(Position::from(&cell))
-        //             .insert(Velocity::zero())
-        //             .insert(Prisoner)
-        //             .insert(SpawnPoint(cell.clone()))
-        //             .insert(Speed::bad_guy());
-        //         needs_cell = true;
-        //     }
-        //     'o' => {
-        //         commands
-        //             .spawn_bundle(sprite(wall.clone(), &cell))
-        //             .insert(cell.clone())
-        //             .insert(NonWalkable);
-        //         needs_walkable = false;
-        //     }
-        //     'x' => {
-        //         commands
-        //             .spawn_bundle(sprite(exit.clone(), &cell))
-        //             .insert(cell.clone())
-        //             .insert(Exit);
-        //     }
-        //     's' => {
-        //         commands
-        //             .spawn_bundle(sprite(prison_door.clone(), &cell))
-        //             .insert(cell.clone())
-        //             .insert(Door::Closed)
-        //             .insert(NonWalkable);
-        //         needs_walkable = false;
-        //     }
-        //     'c' => {
-        //         needs_cell = true;
-        //     }
-        //     _ => {}
-        // };
-        // match right {
-        //     'w' => {
-        //         commands
-        //             .spawn_bundle(sprite(wire.clone(), &cell))
-        //             .insert(cell.clone())
-        //             .insert(Wire);
-        //     }
-        //     _ => {}
-        // }
-        // if needs_walkable {
-        //     commands.spawn().insert(cell.clone()).insert(Walkable);
-        // }
-        // if needs_cell {
-        //     commands.spawn().insert(cell.clone()).insert(PrisonRoom);
-        // }
+    for x in min.0.x..max.0.x {
+        for y in min.0.y..max.0.y {
+            dbg!(x, y);
+            let cell = GridPosition::new(x, y);
+            if items_added.contains_key(&cell) {
+                continue;
+            }
+
+            dbg!("SPAWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWN");
+            commands.spawn().insert(cell).insert(Walkable);
+        }
     }
 }
 
