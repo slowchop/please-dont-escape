@@ -139,6 +139,14 @@ fn ui(
                 select_item(ui, "Security Door", &mut item, Item::Door);
                 select_item(ui, "Exit", &mut item, Item::Exit);
                 select_item(ui, "Wire", &mut item, Item::Wire);
+                select_item(ui, "Background Image", &mut item, Item::Background("menus/logo.png".into()));
+
+                if let Item::Background(b) = &mut *item {
+                    ui.horizontal(|ui| {
+                        ui.label("Image path:");
+                        ui.text_edit_singleline(b);
+                    });
+                }
             });
 
             ui.separator();
