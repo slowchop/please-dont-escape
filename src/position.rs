@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use core::convert::From;
 use nalgebra::Vector2;
 use rand::{thread_rng, Rng};
-use std::ops::{Add, Deref, Sub};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::ops::{Add, Deref, Div, Sub, Mul};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct GridPosition(pub Vector2<i32>);
@@ -65,7 +65,22 @@ impl Add<&Direction> for GridPosition {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum FlexPosition {
+    Position(Position),
+    Grid(GridPosition),
+}
+
+impl Into<Position> for FlexPosition {
+    fn into(self) -> Position {
+        match self {
+            FlexPosition::Position(p) => p,
+            FlexPosition::Grid(g) => g.to_position(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Position(pub Vector2<f64>);
 
 impl Position {
@@ -115,6 +130,12 @@ impl Into<Vec2> for Position {
     }
 }
 
+impl Into<Vec3> for Position {
+    fn into(self) -> Vec3 {
+        Vec3::new(self.0.x as f32, self.0.y as f32, 0.0)
+    }
+}
+
 impl From<Vec2> for Position {
     fn from(v: Vec2) -> Self {
         Position::new(v.x as f64, v.y as f64)
@@ -134,6 +155,22 @@ impl Sub for Position {
 
     fn sub(self, rhs: Self) -> Self::Output {
         (self.0 - rhs.0).into()
+    }
+}
+
+impl Div<f64> for Position {
+    type Output = Position;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Position::new(self.0.x / &rhs, self.0.y / &rhs)
+    }
+}
+
+impl Mul<f64> for Position {
+    type Output = Position;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Position::new(self.0.x * &rhs, self.0.y * &rhs)
     }
 }
 

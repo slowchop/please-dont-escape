@@ -1,5 +1,5 @@
 use crate::game::CELL_SIZE;
-use crate::position::{GridPosition, Position};
+use crate::position::{FlexPosition, GridPosition, Position};
 use crate::AppState;
 use bevy::input::mouse::MouseButtonInput;
 use bevy::prelude::*;
@@ -25,7 +25,7 @@ impl Plugin for Editor {
             .insert_resource(Map::new())
             .insert_resource(UiFilename("level1".into()))
             .insert_resource(Mode::Add)
-            .insert_resource(UiItem::Wall)
+            .insert_resource(Item::Wall)
             .insert_resource(SelectedItem::Nothing)
             //
             .add_system_set(SystemSet::on_enter(AppState::Editor).with_system(setup.system()))
@@ -77,10 +77,10 @@ fn ui(
     asset_server: Res<AssetServer>,
     mut ui_filename: ResMut<UiFilename>,
     mut mode: ResMut<Mode>,
-    mut ui_item: ResMut<UiItem>,
+    mut item: ResMut<Item>,
     mut map: ResMut<Map>,
     selected_item: Res<SelectedItem>,
-    ui_items: Query<(Entity, &UiItem, &Transform)>,
+    items: Query<(Entity, &Item, &Transform)>,
 ) {
     egui::Window::new("Editor")
         .default_width(200.0)
@@ -100,14 +100,7 @@ fn ui(
                     *map = serde_json::from_reader(f).expect("Could not read from file.");
 
                     for item in &map.items {
-                        let pos = item.position().into();
-                        add_item(
-                            &mut commands,
-                            &mut materials,
-                            &asset_server,
-                            &pos,
-                            &*ui_item,
-                        );
+                        add_item(&mut commands, &mut materials, &asset_server, &*item);
                     }
                 };
                 if ui.button("Save").clicked() {
@@ -128,12 +121,12 @@ fn ui(
             });
             ui.heading("Item");
             ui.horizontal_wrapped(|ui| {
-                select_item(ui, "Wall", &mut ui_item, UiItem::Wall);
-                select_item(ui, "Warden Spawn", &mut ui_item, UiItem::Warden);
-                select_item(ui, "Prisoner Spawn", &mut ui_item, UiItem::Prisoner);
-                select_item(ui, "Security Door", &mut ui_item, UiItem::Door);
-                select_item(ui, "Exit", &mut ui_item, UiItem::Exit);
-                select_item(ui, "Wire", &mut ui_item, UiItem::Wire);
+                select_item(ui, "Wall", &mut item, Item::Wall);
+                select_item(ui, "Warden Spawn", &mut item, Item::Warden);
+                select_item(ui, "Prisoner Spawn", &mut item, Item::Prisoner);
+                select_item(ui, "Security Door", &mut item, Item::Door);
+                select_item(ui, "Exit", &mut item, Item::Exit);
+                select_item(ui, "Wire", &mut item, Item::Wire);
             });
 
             ui.separator();
@@ -146,7 +139,7 @@ fn ui(
                 SelectedItem::Item(item) => {
                     ui.label(format!("{:#?}", item));
                     if ui.button("Delete").clicked() {
-                        // let a = ui_items
+                        // let a = items
                         //     .iter()
                         //     .filter(|(_, i, t)| {
                         //         i.matches_item_variant(item)
@@ -165,7 +158,7 @@ fn ui(
 }
 
 // TODO: Work out how to make generic
-fn select_item(ui: &mut Ui, title: &str, item: &mut ResMut<UiItem>, new_item: UiItem) {
+fn select_item(ui: &mut Ui, title: &str, item: &mut ResMut<Item>, new_item: Item) {
     if ui.selectable_label(**item == new_item, title).clicked() {
         **item = new_item;
     };
@@ -207,7 +200,7 @@ fn click_add(
     mut map: ResMut<Map>,
     button: Res<Input<MouseButton>>,
     mode: Res<Mode>,
-    ui_item: Res<UiItem>,
+    item: Res<Item>,
     selection: Query<&Transform, With<Selection>>,
 ) {
     if !button.just_pressed(MouseButton::Left) {
@@ -218,16 +211,17 @@ fn click_add(
     }
 
     let transform = selection.single().unwrap();
-    add_item(
-        &mut commands,
-        &mut materials,
-        &asset_server,
-        &(transform.translation.truncate() / CELL_SIZE),
-        &*ui_item,
-    );
-    let pos = transform.clone().translation.truncate() / CELL_SIZE;
-    let pos = GridPosition::new(pos.x.clone() as i32, pos.y.clone() as i32);
-    map.items.push(ui_item.into_item(&pos));
+    let pos: Position = (transform.translation.truncate() / CELL_SIZE).into();
+    let item_info = ItemInfo {
+        item: item.clone(),
+        pos: FlexPosition::Grid(pos.nearest_cell()),
+    };
+
+    add_item(&mut commands, &mut materials, &asset_server, &item_info);
+    // let pos = transform.clone().translation.truncate() / CELL_SIZE;
+    // let pos = GridPosition::new(pos.x.clone() as i32, pos.y.clone() as i32);
+
+    map.items.push(item_info);
 }
 
 enum SelectedItem {
@@ -240,8 +234,8 @@ fn click_select(
     map: Res<Map>,
     selection: Query<&Transform, With<Selection>>,
     mode: Res<Mode>,
-    ui_item: Res<UiItem>,
-    // mut ui_items: Query<UiItem>,
+    item: Res<Item>,
+    // mut items: Query<Item>,
     mut selected_item: ResMut<SelectedItem>,
 ) {
     if !button.just_pressed(MouseButton::Left) {
@@ -251,25 +245,30 @@ fn click_select(
         return;
     }
 
-    let pos: Position = (selection.single().unwrap().translation.truncate() / CELL_SIZE).into();
-    let mut found = None;
-    for item in &map.items {
-        if item.position().distance_to(&pos) < 0.5 {
-            if *mode == Mode::Select {
-                found = Some(item);
-                break;
-            } else {
-                if variant_eq(&ui_item.into_item(&GridPosition::zero()), item) {
-                    found = Some(item);
-                    break;
-                }
-            }
+    let selection_pos: Position = (selection.single().unwrap().translation.truncate() / CELL_SIZE).into();
+    // let mut found = None;
+    for scan_item_info in &map.items {
+        let scan_pos: Position = scan_item_info.pos.into();
+        // CELL_SIZE;
+        let scan_pos = scan_pos / (CELL_SIZE as f64);
+        if selection_pos.distance_to(&scan_pos) < 0.5 {
+            info!("found!");
+            //         if *mode == Mode::Select {
+            //             found = Some(item_info);
+            //             break;
+            //         } else {
+            //             if &item_info.item, item_info.item) {
+            //                 found = Some(item_info);
+            //                 break;
+            //             }
+            //         }
         }
     }
-    if let Some(found) = found {
-        info!("found! {:?}", found);
-        *selected_item = SelectedItem::Item(found.clone());
-    }
+
+    // if let Some(found) = found {
+    //     info!("found! {:?}", found);
+    //     *selected_item = SelectedItem::Item(found.clone());
+    // }
 }
 
 fn variant_eq<T>(a: &T, b: &T) -> bool {
@@ -280,17 +279,17 @@ fn add_item(
     mut commands: &mut Commands,
     mut materials: &mut ResMut<Assets<ColorMaterial>>,
     asset_server: &Res<AssetServer>,
-    pos: &Vec2,
-    ui_item: &UiItem,
+    item_info: &ItemInfo,
 ) {
-    let handle = materials.add(asset_server.load(ui_item.path()).into());
+    let handle = materials.add(asset_server.load(item_info.item.path()).into());
+    let pos: Position = item_info.pos.into();
     commands
         .spawn_bundle(SpriteBundle {
             material: handle,
-            transform: Transform::from_translation(pos.extend(0.0) * CELL_SIZE),
+            transform: Transform::from_translation((pos * CELL_SIZE as f64).into()),
             ..Default::default()
         })
-        .insert(ui_item.clone());
+        .insert(item_info.clone());
 }
 
 fn drag_diff(
@@ -332,7 +331,7 @@ enum Mode {
 
 #[derive(Serialize, Deserialize)]
 struct Map {
-    items: Vec<Item>,
+    items: Vec<ItemInfo>,
 }
 
 impl Map {
@@ -341,9 +340,15 @@ impl Map {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
-enum UiItem {
-    Background,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct ItemInfo {
+    item: Item,
+    pos: FlexPosition,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+enum Item {
+    Background(String),
     Warden,
     Prisoner,
     Wall,
@@ -352,64 +357,16 @@ enum UiItem {
     Wire,
 }
 
-impl UiItem {
+impl Item {
     pub fn path(&self) -> PathBuf {
         match self {
-            UiItem::Wall => "cells/wall.png".into(),
-            UiItem::Door => "cells/door.png".into(),
-            UiItem::Exit => "cells/exit.png".into(),
-            UiItem::Wire => "cells/wire.png".into(),
-            UiItem::Prisoner => "chars/prisoner.png".into(),
-            UiItem::Warden => "chars/warden.png".into(),
-            _ => todo!(),
+            Item::Wall => "cells/wall.png".into(),
+            Item::Door => "cells/door.png".into(),
+            Item::Exit => "cells/exit.png".into(),
+            Item::Wire => "cells/wire.png".into(),
+            Item::Prisoner => "chars/prisoner.png".into(),
+            Item::Warden => "chars/warden.png".into(),
+            Item::Background(s) => s.into(),
         }
     }
-
-    pub fn into_item(self, grid_pos: &GridPosition) -> Item {
-        match self {
-            UiItem::Wall => Item::Wall(grid_pos.clone()),
-            UiItem::Door => Item::Door(grid_pos.clone()),
-            UiItem::Exit => Item::Exit(grid_pos.clone()),
-            UiItem::Wire => Item::Wire(grid_pos.clone()),
-            UiItem::Prisoner => Item::Prisoner(grid_pos.clone()),
-            UiItem::Warden => Item::Warden(grid_pos.clone()),
-            _ => todo!(),
-        }
-    }
-
-    pub fn matches_item_variant(&self, other: &Item) -> bool {
-        let i = self.clone().into_item(&GridPosition::zero());
-        variant_eq(&i, other)
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-enum Item {
-    Background(Background),
-    Warden(GridPosition),
-    Prisoner(GridPosition),
-    Wall(GridPosition),
-    Door(GridPosition),
-    Exit(GridPosition),
-    Wire(GridPosition),
-}
-
-impl Item {
-    pub fn position(&self) -> Position {
-        match self {
-            Item::Background(Background { pos, .. }) => pos.clone(),
-            Item::Warden(p) => p.to_position(),
-            Item::Prisoner(p) => p.to_position(),
-            Item::Wall(p) => p.to_position(),
-            Item::Door(p) => p.to_position(),
-            Item::Exit(p) => p.to_position(),
-            Item::Wire(p) => p.to_position(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct Background {
-    path: String,
-    pos: Position,
 }
