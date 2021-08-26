@@ -1,5 +1,5 @@
 use crate::input::exit_on_escape_key;
-use crate::map::{update_map_with_walkables, Map, NonWalkable, Walkable};
+use crate::map::{update_map_with_walkables, Item, Map, NonWalkable, PathfindingMap, Walkable};
 use crate::path::Path;
 use crate::position::{
     apply_velocity, check_velocity_collisions, sync_sprite_positions, Direction, GridPosition,
@@ -14,6 +14,7 @@ use bevy_egui::{egui, EguiContext};
 use nalgebra::Vector2;
 use rand::prelude::IteratorRandom;
 use rand::{thread_rng, Rng};
+use std::fs::File;
 use std::ops::{Add, Deref, Sub};
 
 pub const CELL_SIZE: f32 = 32.0;
@@ -33,7 +34,7 @@ pub struct Game;
 
 impl Plugin for Game {
     fn build(&self, app: &mut AppBuilder) {
-        app.insert_resource(Map::new())
+        app.insert_resource(PathfindingMap::new())
             //
             .add_system_set(
                 SystemSet::on_enter(AppState::InGame)
@@ -136,33 +137,6 @@ fn setup(
     let style: egui::Style = egui::Style::default();
     egui_context.ctx().set_style(style);
 
-    let text_map = "\
-oWowowxwowowowowowowowowowowowowowowowo o o o o>
-o                                w   w        o.
-o                         o o o ow  owo o o   o.
-o o o o o                 o c c ow  owc p o   o.
-o                         o c c sw  swc c o   x.
-o       o                 o p t.o   o c t.o   o.
-o       o                 o o o.o   o o o.o   o.
-o d d   o                      .  P      .    o.
-o o o o o x o o o o o o o o o o.o.o.o.o.o.o.o.o.
-";
-
-    /*
-    P warden player spawn point
-    p prisoner spawn point
-    o normal wall
-    c cell
-    s security door
-    d office desk
-    x exit
-    W wire source
-    w wire
-    > pipe source
-    . pipe
-    t toilet
-     */
-
     let warden = materials.add(asset_server.load("chars/warden.png").into());
     let prisoner = materials.add(asset_server.load("chars/prisoner.png").into());
     let wall = materials.add(asset_server.load("cells/wall.png").into());
@@ -170,80 +144,106 @@ o o o o o x o o o o o o o o o o.o.o.o.o.o.o.o.o.
     let prison_door = materials.add(asset_server.load("cells/prison-door.png").into());
     let wire = materials.add(asset_server.load("cells/wire.png").into());
 
-    let mut cell = GridPosition::new(0, 0);
-    for line in text_map.split("\n") {
-        cell.0.x = 0;
-        cell.0.y -= 1;
-        for chunk in line.chars().collect::<Vec<_>>().chunks(2) {
-            cell.0.x += 1;
-            let mut needs_walkable = true;
-            let mut needs_cell = false;
+    let mut f = File::open("assets/maps/level1.json").expect("Could not open file for reading.");
+    let map: Map = serde_json::from_reader(f).expect("Could not read from file.");
 
-            let left = chunk[0];
-            let right = chunk[1];
-            match left {
-                'P' => {
-                    commands
-                        .spawn_bundle(sprite(warden.clone(), &cell))
-                        .insert(Position::from(&cell))
-                        .insert(Direction::new())
-                        .insert(Velocity::zero())
-                        .insert(Warden)
-                        .insert(Speed::good_guy())
-                        .insert(KeyboardControl);
-                }
-                'p' => {
-                    commands
-                        .spawn_bundle(sprite(prisoner.clone(), &cell))
-                        .insert(Position::from(&cell))
-                        .insert(Velocity::zero())
-                        .insert(Prisoner)
-                        .insert(SpawnPoint(cell.clone()))
-                        .insert(Speed::bad_guy());
-                    needs_cell = true;
-                }
-                'o' => {
-                    commands
-                        .spawn_bundle(sprite(wall.clone(), &cell))
-                        .insert(cell.clone())
-                        .insert(NonWalkable);
-                    needs_walkable = false;
-                }
-                'x' => {
-                    commands
-                        .spawn_bundle(sprite(exit.clone(), &cell))
-                        .insert(cell.clone())
-                        .insert(Exit);
-                }
-                's' => {
-                    commands
-                        .spawn_bundle(sprite(prison_door.clone(), &cell))
-                        .insert(cell.clone())
-                        .insert(Door::Closed)
-                        .insert(NonWalkable);
-                    needs_walkable = false;
-                }
-                'c' => {
-                    needs_cell = true;
-                }
-                _ => {}
-            };
-            match right {
-                'w' => {
-                    commands
-                        .spawn_bundle(sprite(wire.clone(), &cell))
-                        .insert(cell.clone())
-                        .insert(Wire);
-                }
-                _ => {}
+    for item_info in &map.items {
+        let cell = item_info.pos.nearest_cell_grid_pos();
+        let pos: Position = item_info.pos.into();
+
+        let mut needs_walkable = true;
+        let mut needs_cell = false;
+
+        match item_info.item {
+            Item::Background(_) => {}
+            Item::Warden => {
+                commands
+                    .spawn_bundle(sprite(warden.clone(), &cell))
+                    .insert(pos)
+                    .insert(Direction::new())
+                    .insert(Velocity::zero())
+                    .insert(Warden)
+                    .insert(Speed::good_guy())
+                    .insert(KeyboardControl);
             }
-            if needs_walkable {
-                commands.spawn().insert(cell.clone()).insert(Walkable);
+
+            Item::Prisoner => {}
+            Item::Wall => {
+                        commands
+                            .spawn_bundle(sprite(wall.clone(), &cell))
+                            .insert(cell.clone())
+                            .insert(NonWalkable);
+                needs_walkable = false;
+
             }
-            if needs_cell {
-                commands.spawn().insert(cell.clone()).insert(PrisonRoom);
-            }
+            Item::Door => {}
+            Item::Exit => {}
+            Item::Wire => {}
+        };
+
+        if needs_walkable {
+            commands.spawn().insert(cell.clone()).insert(Walkable);
         }
+        // if needs_cell {
+        //     commands.spawn().insert(cell.clone()).insert(PrisonRoom);
+        // }
+
+        // let left = chunk[0];
+        // let right = chunk[1];
+        // match left {
+        //     'P' => {
+        //     }
+        //     'p' => {
+        //         commands
+        //             .spawn_bundle(sprite(prisoner.clone(), &cell))
+        //             .insert(Position::from(&cell))
+        //             .insert(Velocity::zero())
+        //             .insert(Prisoner)
+        //             .insert(SpawnPoint(cell.clone()))
+        //             .insert(Speed::bad_guy());
+        //         needs_cell = true;
+        //     }
+        //     'o' => {
+        //         commands
+        //             .spawn_bundle(sprite(wall.clone(), &cell))
+        //             .insert(cell.clone())
+        //             .insert(NonWalkable);
+        //         needs_walkable = false;
+        //     }
+        //     'x' => {
+        //         commands
+        //             .spawn_bundle(sprite(exit.clone(), &cell))
+        //             .insert(cell.clone())
+        //             .insert(Exit);
+        //     }
+        //     's' => {
+        //         commands
+        //             .spawn_bundle(sprite(prison_door.clone(), &cell))
+        //             .insert(cell.clone())
+        //             .insert(Door::Closed)
+        //             .insert(NonWalkable);
+        //         needs_walkable = false;
+        //     }
+        //     'c' => {
+        //         needs_cell = true;
+        //     }
+        //     _ => {}
+        // };
+        // match right {
+        //     'w' => {
+        //         commands
+        //             .spawn_bundle(sprite(wire.clone(), &cell))
+        //             .insert(cell.clone())
+        //             .insert(Wire);
+        //     }
+        //     _ => {}
+        // }
+        // if needs_walkable {
+        //     commands.spawn().insert(cell.clone()).insert(Walkable);
+        // }
+        // if needs_cell {
+        //     commands.spawn().insert(cell.clone()).insert(PrisonRoom);
+        // }
     }
 }
 
@@ -400,7 +400,7 @@ fn clear_actions(mut commands: Commands, actions: Query<Entity, With<Action>>) {
 
 fn prisoner_escape(
     mut commands: Commands,
-    map: Res<Map>,
+    map: Res<PathfindingMap>,
     query: Query<(Entity, &Prisoner, &Position), Without<Path>>,
     exits: Query<(&Exit, &GridPosition)>,
 ) {

@@ -14,6 +14,7 @@ use std::fs::File;
 use std::io::Write;
 use std::ops::{Add, Deref};
 use std::path::PathBuf;
+use crate::map::{Map, Item, ItemInfo};
 
 pub struct Editor;
 
@@ -224,7 +225,7 @@ fn click_add(
     selection: Query<&Transform, With<Selection>>,
     egui_context: Res<EguiContext>
 ) {
-    if egui_context.ctx().wants_pointer_input() {
+    if egui_context.ctx().is_pointer_over_area() {
         return;
     }
     if !button.just_pressed(MouseButton::Left) {
@@ -260,7 +261,7 @@ fn click_select(
     mut selected_item: ResMut<SelectedItem>,
     egui_context: Res<EguiContext>
 ) {
-    if egui_context.ctx().wants_pointer_input() {
+    if egui_context.ctx().is_pointer_over_area() {
         return;
     }
     if !button.just_pressed(MouseButton::Left) {
@@ -345,44 +346,3 @@ enum Mode {
     SelectSpecific,
 }
 
-#[derive(Serialize, Deserialize)]
-struct Map {
-    items: Vec<ItemInfo>,
-}
-
-impl Map {
-    fn new() -> Self {
-        Self { items: vec![] }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-struct ItemInfo {
-    item: Item,
-    pos: FlexPosition,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-enum Item {
-    Background(String),
-    Warden,
-    Prisoner,
-    Wall,
-    Door,
-    Exit,
-    Wire,
-}
-
-impl Item {
-    pub fn path(&self) -> PathBuf {
-        match self {
-            Item::Wall => "cells/wall.png".into(),
-            Item::Door => "cells/prison-door.png".into(),
-            Item::Exit => "cells/exit.png".into(),
-            Item::Wire => "cells/wire.png".into(),
-            Item::Prisoner => "chars/prisoner.png".into(),
-            Item::Warden => "chars/warden.png".into(),
-            Item::Background(s) => s.into(),
-        }
-    }
-}

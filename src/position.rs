@@ -1,5 +1,5 @@
 use crate::game::CELL_SIZE;
-use crate::map::Map;
+use crate::map::PathfindingMap;
 use bevy::prelude::*;
 use core::convert::From;
 use nalgebra::Vector2;
@@ -69,6 +69,15 @@ impl Add<&Direction> for GridPosition {
 pub enum FlexPosition {
     Position(Position),
     Grid(GridPosition),
+}
+
+impl FlexPosition {
+   pub fn nearest_cell_grid_pos(&self) -> GridPosition {
+       match self {
+           FlexPosition::Position(p) => p.nearest_cell(),
+           FlexPosition::Grid(g) => g.clone(),
+       }
+   }
 }
 
 impl Into<Position> for FlexPosition {
@@ -246,8 +255,8 @@ impl Velocity {
     }
 }
 
-pub fn check_velocity_collisions(map: Res<Map>, mut query: Query<(&Position, &mut Velocity)>) {
-    let map: &Map = map.deref();
+pub fn check_velocity_collisions(map: Res<PathfindingMap>, mut query: Query<(&Position, &mut Velocity)>) {
+    let map: &PathfindingMap = map.deref();
     for (pos, mut vel) in query.iter_mut() {
         if !map.is_walkable_pos(&Position::from(pos.0 + vel.0)) {
             // Allow "sliding" on the wall.

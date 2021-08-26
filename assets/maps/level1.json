@@ -1,0 +1,634 @@
+{
+  "items": [
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -13,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -12,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -11,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -10,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -9,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -8,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -7,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -5,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -6,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -4,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -3,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -2,
+          12
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -2,
+          11
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -2,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -2,
+          9
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -2,
+          8
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -2,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -2,
+          6
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -2,
+          5
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -2,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -3,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -5,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -6,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -8,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -7,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -9,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -10,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -12,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -13,
+          4
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -13,
+          5
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -13,
+          6
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -13,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -13,
+          9
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -13,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -13,
+          11
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -13,
+          8
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -12,
+          3
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -12,
+          2
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -12,
+          1
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -10,
+          3
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -10,
+          2
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -10,
+          1
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -5,
+          3
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -5,
+          2
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -5,
+          1
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -3,
+          3
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -3,
+          2
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -3,
+          1
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -11,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -10,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -9,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -7,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -6,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -5,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -4,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -4,
+          9
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -4,
+          8
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -4,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -5,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -6,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -7,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -8,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -9,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -10,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -11,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -11,
+          8
+        ]
+      }
+    },
+    {
+      "item": "Wall",
+      "pos": {
+        "Grid": [
+          -11,
+          9
+        ]
+      }
+    },
+    {
+      "item": "Exit",
+      "pos": {
+        "Grid": [
+          -11,
+          1
+        ]
+      }
+    },
+    {
+      "item": "Exit",
+      "pos": {
+        "Grid": [
+          -4,
+          1
+        ]
+      }
+    },
+    {
+      "item": "Door",
+      "pos": {
+        "Grid": [
+          -8,
+          10
+        ]
+      }
+    }
+  ]
+}
