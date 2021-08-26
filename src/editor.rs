@@ -224,9 +224,10 @@ fn click_add(
     map.items.push(item_info);
 }
 
+#[derive(Debug)]
 enum SelectedItem {
     Nothing,
-    Item(Item),
+    Item(ItemInfo),
 }
 
 fn click_select(
@@ -245,30 +246,25 @@ fn click_select(
         return;
     }
 
-    let selection_pos: Position = (selection.single().unwrap().translation.truncate() / CELL_SIZE).into();
-    // let mut found = None;
+    let selection_pos: Position =
+        (selection.single().unwrap().translation.truncate() / CELL_SIZE).into();
+
     for scan_item_info in &map.items {
         let scan_pos: Position = scan_item_info.pos.into();
-        // CELL_SIZE;
-        let scan_pos = scan_pos / (CELL_SIZE as f64);
         if selection_pos.distance_to(&scan_pos) < 0.5 {
-            info!("found!");
-            //         if *mode == Mode::Select {
-            //             found = Some(item_info);
-            //             break;
-            //         } else {
-            //             if &item_info.item, item_info.item) {
-            //                 found = Some(item_info);
-            //                 break;
-            //             }
-            //         }
+            if *mode == Mode::Select {
+                *selected_item = SelectedItem::Item(scan_item_info.clone());
+                return;
+            } else {
+                if scan_item_info.item == *item {
+                    *selected_item = SelectedItem::Item(scan_item_info.clone());
+                    return;
+                }
+            }
         }
     }
 
-    // if let Some(found) = found {
-    //     info!("found! {:?}", found);
-    //     *selected_item = SelectedItem::Item(found.clone());
-    // }
+    *selected_item = SelectedItem::Nothing;
 }
 
 fn variant_eq<T>(a: &T, b: &T) -> bool {
