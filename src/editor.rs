@@ -70,6 +70,15 @@ fn setup(
         .insert(Selection);
 }
 
+fn clear_map(
+    mut commands: &mut Commands,
+    items: &Query<(Entity, &ItemInfo)>,
+){
+    for (ent, _) in items.iter() {
+        commands.entity(ent).despawn();
+    }
+}
+
 fn ui(
     mut commands: Commands,
     egui_context: ResMut<EguiContext>,
@@ -80,12 +89,14 @@ fn ui(
     mut item: ResMut<Item>,
     mut map: ResMut<Map>,
     selected_item: Res<SelectedItem>,
-    items: Query<(Entity, &Item, &Transform)>,
+    items: Query<(Entity, &ItemInfo)>,
 ) {
     egui::Window::new("Editor")
         .default_width(200.0)
         .show(egui_context.ctx(), |ui| {
-            ui.button("New");
+            if ui.button("New").clicked() {
+                clear_map(&mut commands, &items);
+            };
 
             ui.horizontal(|ui| {
                 ui.label("Filename:");
@@ -96,6 +107,7 @@ fn ui(
                 let path = PathBuf::from(format!("assets/maps/{}.json", &ui_filename.0));
                 if ui.button("Load").clicked() {
                     info!("Loading from {:?}", &path);
+                    clear_map(&mut commands, &items);
                     let mut f = File::open(&path).expect("Could not open file for reading.");
                     *map = serde_json::from_reader(f).expect("Could not read from file.");
 
@@ -136,21 +148,21 @@ fn ui(
                 SelectedItem::Nothing => {
                     ui.label("Nothing selected");
                 }
-                SelectedItem::Item(item) => {
-                    ui.label(format!("{:#?}", item));
+                SelectedItem::Item(selected_item_info) => {
+                    ui.label(format!("{:#?}", selected_item_info));
                     if ui.button("Delete").clicked() {
-                        // let a = items
-                        //     .iter()
-                        //     .filter(|(_, i, t)| {
-                        //         i.matches_item_variant(item)
-                        //             && t.translation.truncate().into() == item.position()
-                        //     })
-                        //     .next()
-                        //     .unwrap();
-                        // commands.entity(a).remove();
-                        // Delete from scene
-                        // asdf
-                        // Delete from map
+
+                        // Remove offending item from map.
+                        map.items.retain(|i| i != selected_item_info);
+
+                        // Remove from scene.
+                        for (entity, item_info) in items.iter() {
+                            if item_info != selected_item_info {
+                                continue;
+                            }
+
+                            commands.entity(entity).despawn();
+                        }
                     }
                 }
             }
@@ -357,7 +369,7 @@ impl Item {
     pub fn path(&self) -> PathBuf {
         match self {
             Item::Wall => "cells/wall.png".into(),
-            Item::Door => "cells/door.png".into(),
+            Item::Door => "cells/prison-door.png".into(),
             Item::Exit => "cells/exit.png".into(),
             Item::Wire => "cells/wire.png".into(),
             Item::Prisoner => "chars/prisoner.png".into(),
