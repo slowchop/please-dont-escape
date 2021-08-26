@@ -202,7 +202,11 @@ fn click_add(
     mode: Res<Mode>,
     item: Res<Item>,
     selection: Query<&Transform, With<Selection>>,
+    egui_context: Res<EguiContext>
 ) {
+    if egui_context.ctx().wants_pointer_input() {
+        return;
+    }
     if !button.just_pressed(MouseButton::Left) {
         return;
     }
@@ -218,9 +222,6 @@ fn click_add(
     };
 
     add_item(&mut commands, &mut materials, &asset_server, &item_info);
-    // let pos = transform.clone().translation.truncate() / CELL_SIZE;
-    // let pos = GridPosition::new(pos.x.clone() as i32, pos.y.clone() as i32);
-
     map.items.push(item_info);
 }
 
@@ -236,9 +237,12 @@ fn click_select(
     selection: Query<&Transform, With<Selection>>,
     mode: Res<Mode>,
     item: Res<Item>,
-    // mut items: Query<Item>,
     mut selected_item: ResMut<SelectedItem>,
+    egui_context: Res<EguiContext>
 ) {
+    if egui_context.ctx().wants_pointer_input() {
+        return;
+    }
     if !button.just_pressed(MouseButton::Left) {
         return;
     }
@@ -265,10 +269,6 @@ fn click_select(
     }
 
     *selected_item = SelectedItem::Nothing;
-}
-
-fn variant_eq<T>(a: &T, b: &T) -> bool {
-    std::mem::discriminant(a) == std::mem::discriminant(b)
 }
 
 fn add_item(
