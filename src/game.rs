@@ -491,12 +491,13 @@ fn damage_wires(
 ) {
     let mut rng = thread_rng();
     // 1000 seems good
-    if rng.next_u32() % 100 != 0 {
+    // 100 is good for testing
+    if rng.next_u32() % 1000 != 0 {
         return;
     }
 
-    let ents = good_wires.iter().choose_multiple(&mut rng, 1);
-    let ent = ents.get(0);
+    let entities = good_wires.iter().choose_multiple(&mut rng, 1);
+    let ent = entities.get(0);
     info!("damaging: {:?}", ent);
     match ent {
         Some(e) => {
