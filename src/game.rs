@@ -84,6 +84,7 @@ impl Plugin for Game {
                     .with_system(damage_wires.system())
                     .with_system(damaged_smoke.system())
                     .with_system(move_smoke.system())
+                    .with_system(open_doors_if_any_wires_are_broken.system())
                     // Actions
                     .with_system(warden_actions.system().before(Label::ClearActions))
                     .with_system(clear_actions.system().label(Label::ClearActions)),
@@ -361,18 +362,18 @@ fn player_keyboard_action(
 fn warden_actions(
     mut commands: Commands,
     mut wardens: Query<(&Position, &Direction, &mut Action), With<Warden>>,
-    mut doors: Query<(Entity, &GridPosition, &mut Door)>,
+    mut doors: Query<(Entity, &GridPosition, &Door)>,
     prisoners: Query<(Entity, &Position, &SpawnPoint), (With<Prisoner>, With<Escaping>)>,
 ) {
     for (warden_pos, warden_dir, mut action) in wardens.iter_mut() {
         let forward_pos = warden_pos.nearest_cell() + warden_dir;
-        for (door_ent, door_grid_pos, mut door) in doors.iter_mut() {
+        for (door_ent, door_grid_pos, door) in doors.iter_mut() {
             if &forward_pos != door_grid_pos {
                 continue;
             }
             *action = Action::Done;
 
-            match *door {
+            match door {
                 Door::Closed => {
                     change_door_state(&mut commands, door_ent, true);
                 }
@@ -382,7 +383,7 @@ fn warden_actions(
             }
         }
 
-        if action.deref() == &Action::Done {
+        if *action == Action::Done {
             continue;
         }
 
@@ -407,11 +408,12 @@ fn warden_actions(
 }
 
 fn change_door_state(commands: &mut Commands, door_ent: Entity, open: bool) {
+    let mut e = commands.entity(door_ent);
+
     let door = match open {
         true => Door::Open,
         false => Door::Closed,
     };
-    let mut e = commands.entity(door_ent);
 
     e //
         .insert(door)
@@ -521,7 +523,24 @@ fn damaged_smoke(
     }
 }
 
-fn open_doors_if_any_wires_are_broken() {}
+fn open_doors_if_any_wires_are_broken(
+    mut commands: Commands,
+    broken_wires: Query<(Entity), (With<Wire>, With<Broken>)>,
+    doors: Query<Entity, With<Door>>,
+) {
+    let mut found = false;
+    for _ in broken_wires.iter() {
+        found = true;
+        break;
+    }
+    if !found {
+        return;
+    }
+
+    for door_ent in doors.iter() {
+        change_door_state(&mut commands, door_ent, true);
+    }
+}
 
 fn damaged_check_if_broken(
     mut commands: Commands,
