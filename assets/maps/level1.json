@@ -631,15 +631,6 @@
       }
     },
     {
-      "item": "Warden",
-      "pos": {
-        "Grid": [
-          -10,
-          6
-        ]
-      }
-    },
-    {
       "item": "Prisoner",
       "pos": {
         "Grid": [
@@ -773,6 +764,15 @@
         "Grid": [
           -2,
           4
+        ]
+      }
+    },
+    {
+      "item": "Warden",
+      "pos": {
+        "Grid": [
+          -9,
+          11
         ]
       }
     }

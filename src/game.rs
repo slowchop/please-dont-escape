@@ -374,20 +374,10 @@ fn warden_actions(
 
             match *door {
                 Door::Closed => {
-                    visible.is_visible = false;
-                    *door = Door::Open;
-                    commands
-                        .entity(door_ent)
-                        .remove::<NonWalkable>()
-                        .insert(Walkable);
+                    change_door_state(&mut commands, door_ent, false);
                 }
                 Door::Open => {
-                    visible.is_visible = true;
-                    *door = Door::Closed;
-                    commands
-                        .entity(door_ent)
-                        .remove::<Walkable>()
-                        .insert(NonWalkable);
+                    change_door_state(&mut commands, door_ent, true);
                 }
             }
         }
@@ -413,6 +403,28 @@ fn warden_actions(
                 .remove::<Escaping>()
                 .remove::<Path>();
         }
+    }
+}
+
+fn change_door_state(commands: &mut Commands, door_ent: Entity, open: bool) {
+    let door = match open {
+        true => Door::Open,
+        false => Door::Closed,
+    };
+    let mut e = commands.entity(door_ent);
+
+    e.remove::<Walkable>()
+        .insert(NonWalkable)
+        .insert(door)
+        .insert(Visible {
+            is_visible: open,
+            is_transparent: false,
+        });
+
+    if open {
+        e.remove::<Walkable>().insert(NonWalkable);
+    } else {
+        e.remove::<NonWalkable>().insert(Walkable);
     }
 }
 
@@ -451,7 +463,10 @@ fn prisoner_escape(
     }
 }
 
-fn damage_wires(mut commands: Commands, good_wires: Query<Entity, (With<Wire>, Without<Damaged>, Without<Broken>)>) {
+fn damage_wires(
+    mut commands: Commands,
+    good_wires: Query<Entity, (With<Wire>, Without<Damaged>, Without<Broken>)>,
+) {
     let mut rng = thread_rng();
     // 1000 seems good
     if rng.next_u32() % 100 != 0 {
@@ -505,18 +520,28 @@ fn damaged_smoke(
     }
 }
 
+fn open_doors_if_any_wires_are_broken() {}
+
 fn damaged_check_if_broken(
     mut commands: Commands,
-    mut damaged: Query<(Entity, &mut Damaged)>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
     time: Res<Time>,
+    mut damaged: Query<(Entity, &mut Damaged)>,
 ) {
     for (ent, mut damage) in damaged.iter_mut() {
         if !damage.0.tick(time.delta()).just_finished() {
             continue;
         }
 
-        dbg!("???");
-        commands.entity(ent).remove::<Damaged>().insert(Broken);
+        let mut color_material: ColorMaterial = asset_server.load("cells/wire-broken.png").into();
+        let material = materials.add(color_material);
+        commands
+            .entity(ent)
+            .remove::<Damaged>()
+            .remove::<Smoking>()
+            .insert(Broken)
+            .insert(material);
     }
 }
 
