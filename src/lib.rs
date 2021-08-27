@@ -6,6 +6,9 @@ mod menus;
 mod path;
 mod position;
 mod splash;
+mod wires;
+mod player;
+
 use crate::game::Game;
 use crate::menus::MainMenu;
 use crate::splash::SplashScreen;
