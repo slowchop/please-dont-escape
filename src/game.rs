@@ -173,13 +173,13 @@ fn setup(
             if max.0.y < cell.0.y {
                 max.0.y = cell.0.y;
             }
-
-            dbg!(min, max);
         }
 
-        items_added.insert(cell.clone(), ());
+        // None, don't affect the map.
+        // Some(true) Walkable component
+        // Some(false) NonWalkable component
+        let mut walkable = None;
 
-        let mut needs_walkable = true;
         let mut needs_cell = false;
 
         match &item_info.item {
@@ -211,17 +211,15 @@ fn setup(
             Item::Wall => {
                 commands
                     .spawn_bundle(sprite(wall.clone(), &cell))
-                    .insert(cell.clone())
-                    .insert(NonWalkable);
-                needs_walkable = false;
+                    .insert(cell.clone());
+                walkable = Some(false);
             }
             Item::Door => {
                 commands
                     .spawn_bundle(sprite(prison_door.clone(), &cell))
                     .insert(cell.clone())
-                    .insert(Door::Closed)
-                    .insert(NonWalkable);
-                needs_walkable = false;
+                    .insert(Door::Closed);
+                walkable = Some(false);
             }
             Item::Exit => {
                 commands
@@ -237,9 +235,18 @@ fn setup(
             }
         };
 
-        if needs_walkable {
-            commands.spawn().insert(cell.clone()).insert(Walkable);
+        match walkable {
+            None => {
+            },
+            Some(true) => {
+                commands.spawn().insert(cell.clone()).insert(Walkable);
+            }
+            Some(false) => {
+                items_added.insert(cell, ());
+                commands.spawn().insert(cell.clone()).insert(NonWalkable);
+            }
         }
+
         if needs_cell {
             commands.spawn().insert(cell.clone()).insert(PrisonRoom);
         }
@@ -247,13 +254,11 @@ fn setup(
 
     for x in min.0.x..max.0.x {
         for y in min.0.y..max.0.y {
-            dbg!(x, y);
             let cell = GridPosition::new(x, y);
             if items_added.contains_key(&cell) {
                 continue;
             }
 
-            dbg!("SPAWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWN");
             commands.spawn().insert(cell).insert(Walkable);
         }
     }

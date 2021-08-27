@@ -667,6 +667,114 @@
           7
         ]
       }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -7,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -6,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -5,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -4,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -3,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -2,
+          10
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -2,
+          9
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -2,
+          8
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -2,
+          7
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -2,
+          6
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -2,
+          5
+        ]
+      }
+    },
+    {
+      "item": "Wire",
+      "pos": {
+        "Grid": [
+          -2,
+          4
+        ]
+      }
     }
   ]
 }

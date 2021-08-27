@@ -22,3 +22,9 @@ web_deploy: web
 web_docker:
 	docker build -t please_dont_escape .
 
+exe:
+	cargo build --release
+	rm -fr dist please-dont-escape-win64.zip
+	mkdir dist
+	cp -pr assets dist/assets && cp target/release/please-dont-escape.exe dist
+	cd dist && zip -r please-dont-escape-win64.zip *
