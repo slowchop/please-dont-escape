@@ -364,6 +364,9 @@ fn warden_actions(
     mut wardens: Query<(&Position, &Direction, &mut Action), With<Warden>>,
     mut doors: Query<(Entity, &GridPosition, &Door)>,
     prisoners: Query<(Entity, &Position, &SpawnPoint), (With<Prisoner>, With<Escaping>)>,
+    // broken_wires: Query<(Entity, &Position), (With<Wire>, Or<With<Broken>, With<Damaged>>)
+    // broken_wires: Query<(Entity, &Position, Option<&Broken>, Option<&Damaged>), With<Wire>>,
+    broken_wires: Query<(Entity, &GridPosition, Option<&Broken>, Option<&Damaged>), With<Wire>>,
 ) {
     for (warden_pos, warden_dir, mut action) in wardens.iter_mut() {
         let forward_pos = warden_pos.nearest_cell() + warden_dir;
@@ -393,8 +396,6 @@ fn warden_actions(
                 continue;
             }
 
-            info!("prisoner action done!");
-
             // Temporarily just respawn them!
             let new_pos: Position = spawn_point.0.into();
             commands
@@ -403,6 +404,22 @@ fn warden_actions(
                 .insert(Velocity::zero())
                 .remove::<Escaping>()
                 .remove::<Path>();
+        }
+
+        for (wire_ent, wire_pos, maybe_broken, maybe_damaged) in broken_wires.iter() {
+            if maybe_broken.is_none() && maybe_damaged.is_none() {
+                continue;
+            }
+            let dist = warden_pos.distance_to(&wire_pos.into());
+            if dist > 1.5 {
+                continue;
+            }
+
+            commands
+                .entity(wire_ent)
+                .remove::<Smoking>()
+                .remove::<Broken>()
+                .remove::<Damaged>();
         }
     }
 }
