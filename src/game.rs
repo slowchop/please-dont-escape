@@ -361,11 +361,11 @@ fn player_keyboard_action(
 
 fn warden_actions(
     mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
     mut wardens: Query<(&Position, &Direction, &mut Action), With<Warden>>,
     mut doors: Query<(Entity, &GridPosition, &Door)>,
     prisoners: Query<(Entity, &Position, &SpawnPoint), (With<Prisoner>, With<Escaping>)>,
-    // broken_wires: Query<(Entity, &Position), (With<Wire>, Or<With<Broken>, With<Damaged>>)
-    // broken_wires: Query<(Entity, &Position, Option<&Broken>, Option<&Damaged>), With<Wire>>,
     broken_wires: Query<(Entity, &GridPosition, Option<&Broken>, Option<&Damaged>), With<Wire>>,
 ) {
     for (warden_pos, warden_dir, mut action) in wardens.iter_mut() {
@@ -415,11 +415,13 @@ fn warden_actions(
                 continue;
             }
 
+            let wire = materials.add(asset_server.load("cells/wire.png").into());
             commands
                 .entity(wire_ent)
                 .remove::<Smoking>()
                 .remove::<Broken>()
-                .remove::<Damaged>();
+                .remove::<Damaged>()
+                .insert(wire);
         }
     }
 }
