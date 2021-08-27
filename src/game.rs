@@ -14,7 +14,7 @@ use bevy_egui::egui::FontDefinitions;
 use bevy_egui::{egui, EguiContext};
 use nalgebra::Vector2;
 use rand::prelude::IteratorRandom;
-use rand::{thread_rng, Rng};
+use rand::{thread_rng, Rng, RngCore};
 use std::fs::File;
 use std::ops::{Add, Deref, Sub};
 
@@ -79,6 +79,12 @@ impl Plugin for Game {
                     .with_system(sync_sprite_positions.system().after(Label::ApplyVelocity))
                     .with_system(update_map_with_walkables.system())
                     .with_system(prisoner_escape.system())
+                    //
+                    .with_system(damaged_check_if_broken.system())
+                    .with_system(damage_wires.system())
+                    .with_system(damaged_smoke.system())
+                    .with_system(move_smoke.system())
+                    // Actions
                     .with_system(warden_actions.system().before(Label::ClearActions))
                     .with_system(clear_actions.system().label(Label::ClearActions)),
             );
@@ -93,6 +99,15 @@ struct Warden;
 
 #[derive(Debug)]
 struct Prisoner;
+
+#[derive(Debug)]
+struct Damaged(Timer);
+
+#[derive(Debug)]
+struct Broken;
+
+#[derive(Debug)]
+struct Disconnected;
 
 #[derive(Debug, PartialEq)]
 enum Action {
@@ -235,16 +250,9 @@ fn setup(
             }
         };
 
-        match walkable {
-            None => {
-            },
-            Some(true) => {
-                commands.spawn().insert(cell.clone()).insert(Walkable);
-            }
-            Some(false) => {
-                items_added.insert(cell, ());
-                commands.spawn().insert(cell.clone()).insert(NonWalkable);
-            }
+        if walkable == Some(false) {
+            items_added.insert(cell, ());
+            commands.spawn().insert(cell.clone()).insert(NonWalkable);
         }
 
         if needs_cell {
@@ -440,5 +448,117 @@ fn prisoner_escape(
         } else {
             // info!("no path found!");
         }
+    }
+}
+
+fn damage_wires(mut commands: Commands, good_wires: Query<Entity, (With<Wire>, Without<Damaged>, Without<Broken>)>) {
+    let mut rng = thread_rng();
+    // 1000 seems good
+    if rng.next_u32() % 100 != 0 {
+        return;
+    }
+
+    let ents = good_wires.iter().choose_multiple(&mut rng, 1);
+    let ent = ents.get(0);
+    info!("damaging: {:?}", ent);
+    match ent {
+        Some(e) => {
+            commands
+                .entity(*e)
+                .insert(Damaged(Timer::from_seconds(2.0, false)))
+                .insert(Smoking(Timer::from_seconds(0.5, true)));
+        }
+        None => {
+            info!("No wires left to smoke");
+        }
+    };
+}
+
+#[derive(Debug)]
+struct Smoke;
+
+#[derive(Debug)]
+struct Smoking(Timer);
+
+fn damaged_smoke(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+    time: Res<Time>,
+    mut damaged: Query<(&Transform, &mut Smoking)>,
+) {
+    for (transform, mut timer) in damaged.iter_mut() {
+        if !timer.0.tick(time.delta()).just_finished() {
+            continue;
+        }
+
+        let mut color_material: ColorMaterial = asset_server.load("effects/smoke.png").into();
+        let material = materials.add(color_material);
+        commands
+            .spawn_bundle(SpriteBundle {
+                material: material.clone(),
+                transform: transform.clone(),
+                ..Default::default()
+            })
+            .insert(Smoke)
+            .insert(Alpha(1.0));
+    }
+}
+
+fn damaged_check_if_broken(
+    mut commands: Commands,
+    mut damaged: Query<(Entity, &mut Damaged)>,
+    time: Res<Time>,
+) {
+    for (ent, mut damage) in damaged.iter_mut() {
+        if !damage.0.tick(time.delta()).just_finished() {
+            continue;
+        }
+
+        dbg!("???");
+        commands.entity(ent).remove::<Damaged>().insert(Broken);
+    }
+}
+
+struct Alpha(f32);
+
+fn move_smoke(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+    mut smokes: Query<
+        (
+            Entity,
+            &mut Transform,
+            &mut Handle<ColorMaterial>,
+            &mut Alpha,
+        ),
+        With<Smoke>,
+    >,
+) {
+    for (ent, mut transform, mut material, mut alpha) in smokes.iter_mut() {
+        alpha.0 -= 0.01;
+        if alpha.0 <= 0.0 {
+            commands.entity(ent).despawn();
+            return;
+        }
+
+        // none of this works :(
+        //
+        // let mut color_mat = materials.get_mut(&material).unwrap();
+        // color_mat.color = Color::rgba(1.0,0.0,1.0, alpha.0);
+        // ColorMaterial::modulated_texture()
+        // color_material.color = Color::Rgba {
+        //     red: 1.0,
+        //     green: 0.0,
+        //     blue: 0.0,
+        //     alpha: alpha.0,
+        // };
+        // *material = materials.add(color_material);
+        // dbg!("yay");
+        transform.translation.y += 0.1;
+        // let new_alpha = material.color.a() - 0.001;
+        // material.color.set_a(new_alpha);
+        // dbg!(material.color);
     }
 }
