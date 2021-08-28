@@ -34,7 +34,7 @@ pub fn run() {
         Some("solo") => AppState::InGame,
         Some("editor") => AppState::Editor,
         Some(x) => panic!("Unknown argument: {}", x),
-        None => AppState::SplashScreen,
+        None => AppState::MainMenu,
     };
 
     let mut app = App::build();
@@ -58,7 +58,7 @@ pub fn run() {
 
     app.add_plugin(EguiPlugin)
         .add_state(initial_app_state)
-        .add_plugin(SplashScreen)
+        // .add_plugin(SplashScreen)
         .add_plugin(MainMenu)
         .add_plugin(Game)
         .add_plugin(Editor)

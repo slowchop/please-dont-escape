@@ -62,6 +62,8 @@ pub enum Item {
     Door,
     Exit,
     Wire,
+    GeneralTile,
+    CellTile,
 }
 
 impl Item {
@@ -72,6 +74,8 @@ impl Item {
             Item::Door => "cells/cell-door.png".into(),
             Item::Exit => "cells/exit.png".into(),
             Item::Wire => "cells/wire.png".into(),
+            Item::CellTile => "cells/cell-tile.png".into(),
+            Item::GeneralTile => "cells/general-tile.png".into(),
             Item::Prisoner => "chars/prisoner.png".into(),
             Item::Warden => "chars/warden.png".into(),
             Item::Background(s) => s.into(),

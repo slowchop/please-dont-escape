@@ -213,6 +213,12 @@ fn setup(
             Item::Wire => {
                 ent.insert(grid_pos).insert(Wire);
             }
+            Item::GeneralTile => {
+                ent.insert(grid_pos);
+            }
+            Item::CellTile => {
+                ent.insert(grid_pos);
+            }
         };
 
         // Fill out the "shape" of the item

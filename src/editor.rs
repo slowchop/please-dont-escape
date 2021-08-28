@@ -39,7 +39,8 @@ impl Plugin for Editor {
                     .with_system(click_add.system())
                     .with_system(click_select.system())
                     .with_system(drag_diff.system())
-                    .with_system(drag.system()),
+                    .with_system(drag.system())
+                    .with_system(rotate_key.system()),
             );
     }
 }
@@ -47,7 +48,7 @@ impl Plugin for Editor {
 struct Selection;
 
 #[derive(Debug, Clone, PartialEq)]
-struct ItemRotation(f32);
+pub struct ItemRotation(f32);
 
 fn setup(
     mut commands: Commands,
@@ -139,6 +140,8 @@ fn ui(
 
             ui.heading("Item");
             ui.horizontal_wrapped(|ui| {
+                select_item(ui, "General Tile", &mut item, Item::GeneralTile);
+                select_item(ui, "Cell Tile", &mut item, Item::CellTile);
                 select_item(ui, "Wall", &mut item, Item::Wall);
                 select_item(ui, "Wall Corner", &mut item, Item::WallCorner);
                 select_item(ui, "Warden Spawn", &mut item, Item::Warden);
@@ -258,7 +261,7 @@ fn selection_follows_mouse(
     // Snap!
     let snapped_pos = (transform.translation / GRID_SIZE).round() * GRID_SIZE;
     transform.translation = snapped_pos;
-    transform.translation.z = 5.0;  // bring selection/add preview to the front
+    transform.translation.z = 5.0; // bring selection/add preview to the front
     transform.rotation = angle_to_quat(item_rotation.0.clone());
 
     let selection = selections.single().expect("Wrong amount of selections.");
@@ -280,6 +283,16 @@ fn selection_follows_mouse(
     }
     ent_cmd.insert(transform);
     *previous = new;
+}
+
+pub fn rotate_key(keys: Res<Input<KeyCode>>, mut query: Query<&mut ItemRotation>) {
+    if keys.just_pressed(KeyCode::R) {
+        let mut item_rotation = query.single_mut().unwrap();
+        item_rotation.0 += 90.0;
+        if item_rotation.0 == 360.0 {
+            *item_rotation = ItemRotation(0.0);
+        }
+    }
 }
 
 fn click_add(

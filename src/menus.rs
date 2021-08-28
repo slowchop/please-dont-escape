@@ -50,6 +50,7 @@ fn main_menu(
         ui.with_layout(Layout::top_down(egui::Align::Center), |ui| {
             ui.add(egui::widgets::Image::new(
                 egui::TextureId::User(LOGO_ID),
+                // [1171.0, 553.0],
                 [1500.0, 256.0],
             ));
 

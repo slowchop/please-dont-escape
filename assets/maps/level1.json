@@ -4,138 +4,108 @@
       "item": "Wall",
       "position": {
         "Grid": [
-          -4,
-          4
+          4,
+          3
         ]
       },
-      "rotation": 0.0
+      "rotation": 90.0
     },
     {
       "item": "Wall",
       "position": {
         "Grid": [
-          -3,
-          4
+          4,
+          2
         ]
       },
-      "rotation": 0.0
+      "rotation": 90.0
     },
     {
       "item": "Wall",
       "position": {
         "Grid": [
-          -2,
-          4
+          4,
+          1
         ]
       },
-      "rotation": 0.0
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          4,
+          0
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          4,
+          -1
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          4,
+          -2
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          4,
+          -3
+        ]
+      },
+      "rotation": 90.0
     },
     {
       "item": "Door",
       "position": {
         "Grid": [
-          1,
-          4
+          4,
+          -6
         ]
       },
-      "rotation": 0.0
+      "rotation": 90.0
     },
     {
       "item": "Wall",
       "position": {
         "Grid": [
           4,
-          4
+          -9
         ]
       },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wall",
-      "position": {
-        "Grid": [
-          5,
-          4
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wall",
-      "position": {
-        "Grid": [
-          6,
-          4
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wall",
-      "position": {
-        "Grid": [
-          6,
-          3
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wall",
-      "position": {
-        "Grid": [
-          6,
-          2
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wall",
-      "position": {
-        "Grid": [
-          6,
-          0
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wall",
-      "position": {
-        "Grid": [
-          6,
-          1
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wall",
-      "position": {
-        "Grid": [
-          6,
-          -1
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wall",
-      "position": {
-        "Grid": [
-          5,
-          -1
-        ]
-      },
-      "rotation": 0.0
+      "rotation": 90.0
     },
     {
       "item": "Wall",
       "position": {
         "Grid": [
           4,
-          -1
+          -10
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "WallCorner",
+      "position": {
+        "Grid": [
+          4,
+          -11
         ]
       },
       "rotation": 0.0
@@ -145,7 +115,7 @@
       "position": {
         "Grid": [
           3,
-          -1
+          -11
         ]
       },
       "rotation": 0.0
@@ -155,7 +125,7 @@
       "position": {
         "Grid": [
           2,
-          -1
+          -11
         ]
       },
       "rotation": 0.0
@@ -165,7 +135,7 @@
       "position": {
         "Grid": [
           1,
-          -1
+          -11
         ]
       },
       "rotation": 0.0
@@ -175,7 +145,7 @@
       "position": {
         "Grid": [
           0,
-          -1
+          -11
         ]
       },
       "rotation": 0.0
@@ -185,7 +155,7 @@
       "position": {
         "Grid": [
           -1,
-          -1
+          -11
         ]
       },
       "rotation": 0.0
@@ -195,7 +165,7 @@
       "position": {
         "Grid": [
           -2,
-          -1
+          -11
         ]
       },
       "rotation": 0.0
@@ -205,7 +175,7 @@
       "position": {
         "Grid": [
           -3,
-          -1
+          -11
         ]
       },
       "rotation": 0.0
@@ -215,7 +185,7 @@
       "position": {
         "Grid": [
           -4,
-          -1
+          -11
         ]
       },
       "rotation": 0.0
@@ -224,30 +194,250 @@
       "item": "Wall",
       "position": {
         "Grid": [
-          -4,
+          -5,
+          -11
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -6,
+          -11
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -7,
+          -11
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -8,
+          -11
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -9,
+          -11
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -10
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -9
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -8
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -7
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -6
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -5
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -4
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -3
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -2
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          -1
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
           0
         ]
       },
-      "rotation": 0.0
+      "rotation": 90.0
     },
     {
       "item": "Wall",
       "position": {
         "Grid": [
-          -4,
+          -10,
           1
         ]
       },
-      "rotation": 0.0
+      "rotation": 90.0
     },
     {
       "item": "Wall",
       "position": {
         "Grid": [
-          -4,
+          -10,
           2
         ]
       },
+      "rotation": 90.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          3,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          2,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          1,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          0,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -1,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -2,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -3,
+          4
+        ]
+      },
       "rotation": 0.0
     },
     {
@@ -255,90 +445,90 @@
       "position": {
         "Grid": [
           -4,
-          3
+          4
         ]
       },
       "rotation": 0.0
     },
     {
-      "item": "Wire",
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -5,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -6,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -7,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -8,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -9,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -10,
+          3
+        ]
+      },
+      "rotation": 90.0
+    },
+    {
+      "item": "WallCorner",
+      "position": {
+        "Grid": [
+          -10,
+          4
+        ]
+      },
+      "rotation": 180.0
+    },
+    {
+      "item": "WallCorner",
       "position": {
         "Grid": [
           4,
           4
         ]
       },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wire",
-      "position": {
-        "Grid": [
-          5,
-          4
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wire",
-      "position": {
-        "Grid": [
-          6,
-          4
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Exit",
-      "position": {
-        "Grid": [
-          -6,
-          -3
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Exit",
-      "position": {
-        "Grid": [
-          8,
-          -3
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Exit",
-      "position": {
-        "Grid": [
-          1,
-          9
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Prisoner",
-      "position": {
-        "Grid": [
-          -1,
-          0
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Warden",
-      "position": {
-        "Grid": [
-          -4,
-          7
-        ]
-      },
-      "rotation": 0.0
+      "rotation": 90.0
     }
   ]
 }
