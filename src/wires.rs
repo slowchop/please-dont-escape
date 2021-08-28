@@ -78,7 +78,7 @@ pub fn open_doors_if_any_wires_are_broken(
     }
 
     for door_ent in doors.iter() {
-        game::change_door_state(&mut commands, door_ent, true);
+        game::change_door_state(&mut commands, door_ent, , true);
     }
 }
 

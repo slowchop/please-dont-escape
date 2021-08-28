@@ -33,13 +33,13 @@ impl GridPosition {
     }
 }
 
-impl Add for &GridPosition {
+impl Add<&GridPosition> for &GridPosition {
     type Output = GridPosition;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut c = self.clone();
-        c.0 += rhs.0;
-        c
+    fn add(self, rhs: &GridPosition) -> Self::Output {
+            let mut c = self.clone();
+            c.0 += rhs.0;
+            c
     }
 }
 
@@ -53,7 +53,7 @@ impl Sub for &GridPosition {
     }
 }
 
-impl Add<&Direction> for GridPosition {
+impl Add<&Direction> for &GridPosition {
     type Output = GridPosition;
 
     fn add(self, rhs: &Direction) -> Self::Output {

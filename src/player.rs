@@ -81,7 +81,7 @@ pub fn warden_actions(
     broken_wires: Query<(Entity, &GridPosition, Option<&Broken>, Option<&Damaged>), With<Wire>>,
 ) {
     for (warden_pos, warden_dir, mut action) in wardens.iter_mut() {
-        let forward_pos = warden_pos.nearest_cell() + warden_dir;
+        let forward_pos = &warden_pos.nearest_cell() + warden_dir;
         for (door_ent, door_grid_pos, door) in doors.iter_mut() {
             if &forward_pos != door_grid_pos {
                 continue;
@@ -90,10 +90,10 @@ pub fn warden_actions(
 
             match door {
                 Door::Closed => {
-                    game::change_door_state(&mut commands, door_ent, true);
+                    game::change_door_state(&mut commands, door_ent, , true);
                 }
                 Door::Open => {
-                    game::change_door_state(&mut commands, door_ent, false);
+                    game::change_door_state(&mut commands, door_ent, , false);
                 }
             }
         }

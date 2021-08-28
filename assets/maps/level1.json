@@ -4,8 +4,8 @@
       "item": "Wall",
       "position": {
         "Grid": [
-          -2,
-          1
+          -4,
+          4
         ]
       },
       "rotation": 0.0
@@ -14,8 +14,8 @@
       "item": "Wall",
       "position": {
         "Grid": [
-          -1,
-          1
+          -3,
+          4
         ]
       },
       "rotation": 0.0
@@ -24,38 +24,8 @@
       "item": "Wall",
       "position": {
         "Grid": [
-          0,
-          1
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wire",
-      "position": {
-        "Grid": [
           -2,
-          1
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Wire",
-      "position": {
-        "Grid": [
-          -1,
-          1
-        ]
-      },
-      "rotation": 0.0
-    },
-    {
-      "item": "Warden",
-      "position": {
-        "Grid": [
-          0,
-          -2
+          4
         ]
       },
       "rotation": 0.0
@@ -65,7 +35,257 @@
       "position": {
         "Grid": [
           1,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          4,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          5,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          6,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          6,
+          3
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          6,
+          2
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          6,
+          0
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          6,
           1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          6,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          5,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          4,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          3,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          2,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          1,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          0,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -1,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -2,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -3,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -4,
+          -1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -4,
+          0
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -4,
+          1
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -4,
+          2
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          -4,
+          3
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wire",
+      "position": {
+        "Grid": [
+          4,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wire",
+      "position": {
+        "Grid": [
+          5,
+          4
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wire",
+      "position": {
+        "Grid": [
+          6,
+          4
         ]
       },
       "rotation": 0.0
@@ -74,8 +294,48 @@
       "item": "Exit",
       "position": {
         "Grid": [
-          -5,
-          -2
+          -6,
+          -3
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Exit",
+      "position": {
+        "Grid": [
+          8,
+          -3
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Exit",
+      "position": {
+        "Grid": [
+          1,
+          9
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Prisoner",
+      "position": {
+        "Grid": [
+          -1,
+          0
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Warden",
+      "position": {
+        "Grid": [
+          -4,
+          7
         ]
       },
       "rotation": 0.0

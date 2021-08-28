@@ -12,7 +12,7 @@ use rand::prelude::IteratorRandom;
 use rand::{thread_rng, Rng, RngCore};
 
 use crate::input::exit_on_escape_key;
-use crate::map::{update_map_with_walkables, Item, Map, NonWalkable, PathfindingMap, Walkable};
+use crate::map::{update_map_with_walkables, Item, Map, NonWalkable, PathfindingMap, Walkable, ItemInfo};
 use crate::path::Path;
 use crate::position::{
     apply_velocity, check_velocity_collisions, sync_sprite_positions, Direction, GridPosition,
@@ -179,11 +179,8 @@ fn setup(
         let mut needs_cell = false;
 
         let handle = materials.add(asset_server.load(item_info.item.path()).into());
-        let mut ent = commands
-            .spawn_bundle(sprite(handle, &cell));
-        ent
-            .insert(pos)
-            .insert(item_info.clone());
+        let mut ent = commands.spawn_bundle(sprite(handle, &cell));
+        ent.insert(pos).insert(item_info.clone());
 
         match &item_info.item {
             Item::Background(_) => {}
@@ -221,14 +218,18 @@ fn setup(
             }
         };
 
-        if walkable == Some(false) {
-            items_added.insert(cell, ());
-            commands.spawn().insert(cell.clone()).insert(NonWalkable);
-        }
+        // Fill out the "shape" of the item
+        for delta in &item_info.shape().0 {
+            let delta_cell = &cell + delta;
+            if walkable == Some(false) {
+                items_added.insert(delta_cell, ());
+                commands.spawn().insert(delta_cell.clone()).insert(NonWalkable);
+            }
 
-        // if needs_cell {
-        //     commands.spawn().insert(cell.clone()).insert(PrisonRoom);
-        // }
+            // if needs_cell {
+            //     commands.spawn().insert(cell.clone()).insert(PrisonRoom);
+            // }
+        }
     }
 
     for x in min.0.x..max.0.x {
@@ -270,7 +271,7 @@ fn sprite(material: Handle<ColorMaterial>, cell: &GridPosition) -> SpriteBundle 
     }
 }
 
-pub fn change_door_state(commands: &mut Commands, door_ent: Entity, open: bool) {
+pub fn change_door_state(commands: &mut Commands, door_ent: Entity, door_item_info: &ItemInfo, open: bool) {
     let mut e = commands.entity(door_ent);
 
     let door = match open {
@@ -287,10 +288,12 @@ pub fn change_door_state(commands: &mut Commands, door_ent: Entity, open: bool) 
             is_transparent: false,
         });
 
-    if open {
-        e.insert(Walkable);
-    } else {
-        e.insert(NonWalkable);
+    for delta in door_item_info.shape().0 {
+        if open {
+            e.insert(Walkable);
+        } else {
+            e.insert(NonWalkable);
+        };
     }
 }
 

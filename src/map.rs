@@ -79,7 +79,7 @@ impl Item {
     }
 }
 
-pub struct Shape(Vec<GridPosition>);
+pub struct Shape(pub Vec<GridPosition>);
 
 /// Specific cells that can be walked on. This should be added when NonWalkable was removed.
 #[derive(Debug)]

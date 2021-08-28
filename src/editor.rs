@@ -246,11 +246,10 @@ fn selection_follows_mouse(
 ) {
     let camera_transform = cameras.single().expect("Wrong amount of cameras.");
     let window = windows.get_primary().unwrap();
-    let maybe_pos = window.cursor_position();
-    if maybe_pos.is_none() {
-        return;
-    }
-    let pos = maybe_pos.unwrap();
+    let pos = match window.cursor_position() {
+        Some(p) => p,
+        None => return,
+    };
     let size = Vec2::new(window.width() as f32, window.height() as f32);
     let p = pos - size / 2.0;
     let world_pos = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
@@ -259,7 +258,7 @@ fn selection_follows_mouse(
     // Snap!
     let snapped_pos = (transform.translation / GRID_SIZE).round() * GRID_SIZE;
     transform.translation = snapped_pos;
-    transform.translation.z = 5.0;
+    transform.translation.z = 5.0;  // bring selection/add preview to the front
     transform.rotation = angle_to_quat(item_rotation.0.clone());
 
     let selection = selections.single().expect("Wrong amount of selections.");
