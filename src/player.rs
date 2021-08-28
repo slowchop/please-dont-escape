@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::game::{CELL_SIZE, Door, Escaping, KeyboardControl, Prisoner, SpawnPoint, Warden};
+use crate::game::{GRID_SIZE, Door, Escaping, KeyboardControl, Prisoner, SpawnPoint, Warden};
 use crate::game;
 use crate::path::Path;
 use crate::position::{Direction, GridPosition, Position, Speed, Velocity};
@@ -29,8 +29,8 @@ pub fn chase_camera(
     let (_, mut camera_pos) = option_first_camera.unwrap();
     let (_, player_pos) = option_first_player.unwrap();
 
-    camera_pos.translation.x = player_pos.0.x as f32 * CELL_SIZE;
-    camera_pos.translation.y = player_pos.0.y as f32 * CELL_SIZE;
+    camera_pos.translation.x = player_pos.0.x as f32 * GRID_SIZE;
+    camera_pos.translation.y = player_pos.0.y as f32 * GRID_SIZE;
 }
 
 pub fn player_keyboard_movement(

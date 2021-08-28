@@ -1,4 +1,4 @@
-use crate::game::CELL_SIZE;
+use crate::game::GRID_SIZE;
 use crate::map::PathfindingMap;
 use bevy::prelude::*;
 use core::convert::From;
@@ -107,8 +107,8 @@ impl Position {
 
     pub fn to_transform(&self) -> Transform {
         Transform::from_xyz(
-            self.0.x.clone() as f32 * CELL_SIZE,
-            self.0.y.clone() as f32 * CELL_SIZE,
+            self.0.x.clone() as f32 * GRID_SIZE,
+            self.0.y.clone() as f32 * GRID_SIZE,
             0.0,
         )
     }

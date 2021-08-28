@@ -1,4 +1,5 @@
-use crate::game::CELL_SIZE;
+use crate::game::GRID_SIZE;
+use crate::map::{angle_to_quat, Item, ItemInfo, Map};
 use crate::position::{FlexPosition, GridPosition, Position};
 use crate::AppState;
 use bevy::input::mouse::MouseButtonInput;
@@ -10,11 +11,11 @@ use bevy_egui::{egui, EguiContext};
 use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::to_vec;
+use std::f32::consts::PI;
 use std::fs::File;
 use std::io::Write;
 use std::ops::{Add, Deref};
 use std::path::PathBuf;
-use crate::map::{Map, Item, ItemInfo};
 
 pub struct Editor;
 
@@ -27,13 +28,14 @@ impl Plugin for Editor {
             .insert_resource(UiFilename("level1".into()))
             .insert_resource(Mode::Add)
             .insert_resource(Item::Wall)
+            .insert_resource(ItemRotation(0.0))
             .insert_resource(SelectedItem::Nothing)
             //
             .add_system_set(SystemSet::on_enter(AppState::Editor).with_system(setup.system()))
             .add_system_set(
                 SystemSet::on_update(AppState::Editor)
                     .with_system(ui.system())
-                    .with_system(camera_to_selection.system())
+                    .with_system(selection_follows_mouse.system())
                     .with_system(click_add.system())
                     .with_system(click_select.system())
                     .with_system(drag_diff.system())
@@ -43,6 +45,9 @@ impl Plugin for Editor {
 }
 
 struct Selection;
+
+#[derive(Debug)]
+struct ItemRotation(f32);
 
 fn setup(
     mut commands: Commands,
@@ -71,10 +76,7 @@ fn setup(
         .insert(Selection);
 }
 
-fn clear_map(
-    mut commands: &mut Commands,
-    items: &Query<(Entity, &ItemInfo)>,
-){
+fn clear_map(mut commands: &mut Commands, items: &Query<(Entity, &ItemInfo)>) {
     for (ent, _) in items.iter() {
         commands.entity(ent).despawn();
     }
@@ -88,6 +90,7 @@ fn ui(
     mut ui_filename: ResMut<UiFilename>,
     mut mode: ResMut<Mode>,
     mut item: ResMut<Item>,
+    mut item_rotation: ResMut<ItemRotation>,
     mut map: ResMut<Map>,
     selected_item: Res<SelectedItem>,
     items: Query<(Entity, &ItemInfo)>,
@@ -132,23 +135,42 @@ fn ui(
                 select_mode(ui, "Select", &mut mode, Mode::Select);
                 select_mode(ui, "Select Specific", &mut mode, Mode::SelectSpecific);
             });
+
             ui.heading("Item");
             ui.horizontal_wrapped(|ui| {
                 select_item(ui, "Wall", &mut item, Item::Wall);
+                select_item(ui, "Wall Corner", &mut item, Item::WallCorner);
                 select_item(ui, "Warden Spawn", &mut item, Item::Warden);
                 select_item(ui, "Prisoner Spawn", &mut item, Item::Prisoner);
                 select_item(ui, "Security Door", &mut item, Item::Door);
                 select_item(ui, "Exit", &mut item, Item::Exit);
                 select_item(ui, "Wire", &mut item, Item::Wire);
-                select_item(ui, "Background Image", &mut item, Item::Background("menus/logo.png".into()));
+                select_item(
+                    ui,
+                    "Background Image",
+                    &mut item,
+                    Item::Background("menus/logo.png".into()),
+                );
+            });
 
-                if let Item::Background(b) = &mut *item {
-                    ui.horizontal(|ui| {
-                        ui.label("Image path:");
-                        ui.text_edit_singleline(b);
-                    });
+            ui.horizontal(|ui| {
+                ui.label("Rotation:");
+                for rotation in [0.0, 90.0, 180.0, 270.0] {
+                    if ui
+                        .selectable_label(item_rotation.0 == rotation, format!("{}", rotation))
+                        .clicked()
+                    {
+                        item_rotation.0 = rotation;
+                    }
                 }
             });
+
+            if let Item::Background(b) = &mut *item {
+                ui.horizontal(|ui| {
+                    ui.label("Image path:");
+                    ui.text_edit_singleline(b);
+                });
+            }
 
             ui.separator();
 
@@ -160,7 +182,6 @@ fn ui(
                 SelectedItem::Item(selected_item_info) => {
                     ui.label(format!("{:#?}", selected_item_info));
                     if ui.button("Delete").clicked() {
-
                         // Remove offending item from map.
                         map.items.retain(|i| i != selected_item_info);
 
@@ -185,17 +206,24 @@ fn select_item(ui: &mut Ui, title: &str, item: &mut ResMut<Item>, new_item: Item
     };
 }
 
-fn select_mode(ui: &mut Ui, title: &str, item: &mut ResMut<Mode>, new_item: Mode) {
+fn select_mode(ui: &mut Ui, title: &str, item: &mut ResMut<Mode>, new_item: Mode) -> bool {
     if ui.selectable_label(**item == new_item, title).clicked() {
         **item = new_item;
+        return true;
     };
+    false
 }
 
-fn camera_to_selection(
+fn selection_follows_mouse(
     mut commands: Commands,
     windows: Res<Windows>,
     cameras: Query<&Transform, With<Camera>>,
     selections: Query<Entity, With<Selection>>,
+    mode: Res<Mode>,
+    item: Res<Item>,
+    item_rotation: Res<ItemRotation>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     let camera_transform = cameras.single().expect("Wrong amount of cameras.");
     let window = windows.get_primary().unwrap();
@@ -203,14 +231,23 @@ fn camera_to_selection(
         let size = Vec2::new(window.width() as f32, window.height() as f32);
         let p = pos - size / 2.0;
         let world_pos = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
-        let mut pos = Transform::from_xyz(world_pos.x.clone(), world_pos.y.clone(), 0.0);
+        let mut transform = Transform::from_xyz(world_pos.x.clone(), world_pos.y.clone(), 0.0);
 
         // Snap!
-        let snapped_pos = (pos.translation / CELL_SIZE).round() * CELL_SIZE;
-        pos.translation = snapped_pos;
+        let snapped_pos = (transform.translation / GRID_SIZE).round() * GRID_SIZE;
+        transform.translation = snapped_pos;
 
         let selection = selections.single().expect("Wrong amount of selections.");
-        commands.entity(selection).insert(pos);
+
+        if *mode == Mode::Add {
+            let material = materials.add(asset_server.load(item.path()).into());
+            commands.entity(selection).insert(material);
+            transform.rotation = angle_to_quat(item_rotation.0.clone());
+        } else {
+            let material = materials.add(asset_server.load("cells/selection.png").into());
+            commands.entity(selection).insert(material);
+        }
+        commands.entity(selection).insert(transform);
     }
 }
 
@@ -222,8 +259,9 @@ fn click_add(
     button: Res<Input<MouseButton>>,
     mode: Res<Mode>,
     item: Res<Item>,
+    item_rotation: Res<ItemRotation>,
     selection: Query<&Transform, With<Selection>>,
-    egui_context: Res<EguiContext>
+    egui_context: Res<EguiContext>,
 ) {
     if egui_context.ctx().is_pointer_over_area() {
         return;
@@ -236,10 +274,11 @@ fn click_add(
     }
 
     let transform = selection.single().unwrap();
-    let pos: Position = (transform.translation.truncate() / CELL_SIZE).into();
+    let pos: Position = (transform.translation.truncate() / GRID_SIZE).into();
     let item_info = ItemInfo {
         item: item.clone(),
-        pos: FlexPosition::Grid(pos.nearest_cell()),
+        position: FlexPosition::Grid(pos.nearest_cell()),
+        rotation: item_rotation.0.clone(),
     };
 
     add_item(&mut commands, &mut materials, &asset_server, &item_info);
@@ -259,7 +298,7 @@ fn click_select(
     mode: Res<Mode>,
     item: Res<Item>,
     mut selected_item: ResMut<SelectedItem>,
-    egui_context: Res<EguiContext>
+    egui_context: Res<EguiContext>,
 ) {
     if egui_context.ctx().is_pointer_over_area() {
         return;
@@ -272,10 +311,10 @@ fn click_select(
     }
 
     let selection_pos: Position =
-        (selection.single().unwrap().translation.truncate() / CELL_SIZE).into();
+        (selection.single().unwrap().translation.truncate() / GRID_SIZE).into();
 
     for scan_item_info in &map.items {
-        let scan_pos: Position = scan_item_info.pos.into();
+        let scan_pos: Position = scan_item_info.position.into();
         if selection_pos.distance_to(&scan_pos) < 0.5 {
             if *mode == Mode::Select {
                 *selected_item = SelectedItem::Item(scan_item_info.clone());
@@ -298,12 +337,14 @@ fn add_item(
     asset_server: &Res<AssetServer>,
     item_info: &ItemInfo,
 ) {
-    let handle = materials.add(asset_server.load(item_info.item.path()).into());
-    let pos: Position = item_info.pos.into();
+    let material = materials.add(asset_server.load(item_info.item.path()).into());
+    let pos: Position = item_info.position.into();
+    let mut transform = Transform::from_translation((pos * GRID_SIZE as f64).into());
+    transform.rotation = item_info.quat();
     commands
         .spawn_bundle(SpriteBundle {
-            material: handle,
-            transform: Transform::from_translation((pos * CELL_SIZE as f64).into()),
+            material,
+            transform,
             ..Default::default()
         })
         .insert(item_info.clone());
@@ -345,4 +386,3 @@ enum Mode {
     Select,
     SelectSpecific,
 }
-

@@ -1,8 +1,9 @@
-use crate::position::{GridPosition, Position, FlexPosition};
+use crate::position::{FlexPosition, GridPosition, Position};
 use bevy::prelude::*;
 use pathfinding::prelude::astar;
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::f32::consts::PI;
+use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize)]
 pub struct Map {
@@ -18,7 +19,22 @@ impl Map {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ItemInfo {
     pub item: Item,
-    pub pos: FlexPosition,
+    pub position: FlexPosition,
+    pub rotation: f32,
+}
+
+pub fn angle_to_radians(a: f32) -> f32 {
+    a / 180.0 * PI
+}
+
+pub fn angle_to_quat(a: f32) -> Quat {
+    Quat::from_rotation_z(angle_to_radians(a))
+}
+
+impl ItemInfo {
+    pub fn quat(&self) -> Quat {
+        angle_to_quat(self.rotation.clone())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -27,6 +43,7 @@ pub enum Item {
     Warden,
     Prisoner,
     Wall,
+    WallCorner,
     Door,
     Exit,
     Wire,
@@ -36,7 +53,8 @@ impl Item {
     pub fn path(&self) -> PathBuf {
         match self {
             Item::Wall => "cells/wall.png".into(),
-            Item::Door => "cells/prison-door.png".into(),
+            Item::WallCorner => "cells/wall-corner.png".into(),
+            Item::Door => "cells/cell-door.png".into(),
             Item::Exit => "cells/exit.png".into(),
             Item::Wire => "cells/wire.png".into(),
             Item::Prisoner => "chars/prisoner.png".into(),

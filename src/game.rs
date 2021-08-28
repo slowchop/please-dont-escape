@@ -5,23 +5,23 @@ use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 use bevy::render::camera::Camera;
 use bevy::utils::HashMap;
-use bevy_egui::{egui, EguiContext};
 use bevy_egui::egui::FontDefinitions;
+use bevy_egui::{egui, EguiContext};
 use nalgebra::Vector2;
-use rand::{Rng, RngCore, thread_rng};
 use rand::prelude::IteratorRandom;
+use rand::{thread_rng, Rng, RngCore};
 
-use crate::{AppState, path, player, wires};
 use crate::input::exit_on_escape_key;
-use crate::map::{Item, Map, NonWalkable, PathfindingMap, update_map_with_walkables, Walkable};
+use crate::map::{update_map_with_walkables, Item, Map, NonWalkable, PathfindingMap, Walkable};
 use crate::path::Path;
 use crate::position::{
-    apply_velocity, check_velocity_collisions, Direction, GridPosition, Position,
-    Speed, sync_sprite_positions, Velocity,
+    apply_velocity, check_velocity_collisions, sync_sprite_positions, Direction, GridPosition,
+    Position, Speed, Velocity,
 };
 use crate::wires::{Smoking, Wire};
+use crate::{path, player, wires, AppState};
 
-pub const CELL_SIZE: f32 = 32.0;
+pub const GRID_SIZE: f32 = 160.0;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, StageLabel)]
 struct FixedUpdateStage;
@@ -132,7 +132,7 @@ fn setup(
     asset_server: Res<AssetServer>,
 ) {
     let mut camera = OrthographicCameraBundle::new_2d();
-    camera.transform.scale = Vec3::new(0.4, 0.4, 1.0);
+    camera.transform.scale = Vec3::new(2.0, 2.0, 1.0);
     commands.spawn_bundle(camera);
 
     let fonts = FontDefinitions::default();
@@ -140,13 +140,6 @@ fn setup(
 
     let style: egui::Style = egui::Style::default();
     egui_context.ctx().set_style(style);
-
-    let warden = materials.add(asset_server.load("chars/warden.png").into());
-    let prisoner = materials.add(asset_server.load("chars/prisoner.png").into());
-    let wall = materials.add(asset_server.load("cells/wall.png").into());
-    let exit = materials.add(asset_server.load("cells/exit.png").into());
-    let prison_door = materials.add(asset_server.load("cells/prison-door.png").into());
-    let wire = materials.add(asset_server.load("cells/wire.png").into());
 
     let mut f = File::open("assets/maps/level1.json").expect("Could not open file for reading.");
     let map: Map = serde_json::from_reader(f).expect("Could not read from file.");
@@ -157,8 +150,8 @@ fn setup(
     let mut items_added: HashMap<GridPosition, ()> = HashMap::default();
 
     for item_info in &map.items {
-        let cell = item_info.pos.nearest_cell_grid_pos();
-        let pos: Position = item_info.pos.into();
+        let cell = item_info.position.nearest_cell_grid_pos();
+        let pos: Position = item_info.position.into();
         if first {
             min = cell.clone();
             max = cell.clone();
@@ -185,15 +178,15 @@ fn setup(
 
         let mut needs_cell = false;
 
+        let handle = materials.add(asset_server.load(item_info.item.path()).into());
+
         match &item_info.item {
-            Item::Background(bg_path) => {
-                let asset: ColorMaterial = asset_server.load(bg_path.as_str()).into();
-                let bg = materials.add(asset);
-                commands.spawn_bundle(sprite(bg, &cell)).insert(pos);
+            Item::Background(_) => {
+                commands.spawn_bundle(sprite(handle, &cell)).insert(pos);
             }
             Item::Warden => {
                 commands
-                    .spawn_bundle(sprite(warden.clone(), &cell))
+                    .spawn_bundle(sprite(handle, &cell))
                     .insert(pos)
                     .insert(Direction::new())
                     .insert(Velocity::zero())
@@ -203,7 +196,7 @@ fn setup(
             }
             Item::Prisoner => {
                 commands
-                    .spawn_bundle(sprite(prisoner.clone(), &cell))
+                    .spawn_bundle(sprite(handle, &cell))
                     .insert(Position::from(&cell))
                     .insert(Velocity::zero())
                     .insert(Prisoner)
@@ -213,26 +206,32 @@ fn setup(
             }
             Item::Wall => {
                 commands
-                    .spawn_bundle(sprite(wall.clone(), &cell))
+                    .spawn_bundle(sprite(handle, &cell))
+                    .insert(cell.clone());
+                walkable = Some(false);
+            }
+            Item::WallCorner => {
+                commands
+                    .spawn_bundle(sprite(handle, &cell))
                     .insert(cell.clone());
                 walkable = Some(false);
             }
             Item::Door => {
                 commands
-                    .spawn_bundle(sprite(prison_door.clone(), &cell))
+                    .spawn_bundle(sprite(handle, &cell))
                     .insert(cell.clone())
                     .insert(Door::Closed);
                 walkable = Some(false);
             }
             Item::Exit => {
                 commands
-                    .spawn_bundle(sprite(exit.clone(), &cell))
+                    .spawn_bundle(sprite(handle, &cell))
                     .insert(cell.clone())
                     .insert(Exit);
             }
             Item::Wire => {
                 commands
-                    .spawn_bundle(sprite(wire.clone(), &cell))
+                    .spawn_bundle(sprite(handle, &cell))
                     .insert(cell.clone())
                     .insert(Wire);
             }
@@ -338,4 +337,3 @@ fn prisoner_escape(
         }
     }
 }
-
