@@ -23,6 +23,21 @@ pub struct ItemInfo {
     pub rotation: f32,
 }
 
+impl ItemInfo {
+    pub fn shape(&self) -> Shape {
+        match self.item {
+            Item::Door => {
+                if self.rotation == 0.0 || self.rotation == 180.0 {
+                    Shape((-2..=2).map(|z| GridPosition::new(z, 0)).collect())
+                } else {
+                    Shape((-2..=2).map(|z| GridPosition::new(0, z)).collect())
+                }
+            }
+            _ => Shape(vec![GridPosition::zero()]),
+        }
+    }
+}
+
 pub fn angle_to_radians(a: f32) -> f32 {
     a / 180.0 * PI
 }
@@ -63,6 +78,8 @@ impl Item {
         }
     }
 }
+
+pub struct Shape(Vec<GridPosition>);
 
 /// Specific cells that can be walked on. This should be added when NonWalkable was removed.
 #[derive(Debug)]

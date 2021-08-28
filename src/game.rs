@@ -179,15 +179,16 @@ fn setup(
         let mut needs_cell = false;
 
         let handle = materials.add(asset_server.load(item_info.item.path()).into());
+        let mut ent = commands
+            .spawn_bundle(sprite(handle, &cell));
+        ent
+            .insert(pos)
+            .insert(item_info.clone());
 
         match &item_info.item {
-            Item::Background(_) => {
-                commands.spawn_bundle(sprite(handle, &cell)).insert(pos);
-            }
+            Item::Background(_) => {}
             Item::Warden => {
-                commands
-                    .spawn_bundle(sprite(handle, &cell))
-                    .insert(pos)
+                ent //
                     .insert(Direction::new())
                     .insert(Velocity::zero())
                     .insert(Warden)
@@ -195,9 +196,7 @@ fn setup(
                     .insert(KeyboardControl);
             }
             Item::Prisoner => {
-                commands
-                    .spawn_bundle(sprite(handle, &cell))
-                    .insert(Position::from(&cell))
+                ent //
                     .insert(Velocity::zero())
                     .insert(Prisoner)
                     .insert(SpawnPoint(cell.clone()))
@@ -205,35 +204,20 @@ fn setup(
                 needs_cell = true;
             }
             Item::Wall => {
-                commands
-                    .spawn_bundle(sprite(handle, &cell))
-                    .insert(cell.clone());
                 walkable = Some(false);
             }
             Item::WallCorner => {
-                commands
-                    .spawn_bundle(sprite(handle, &cell))
-                    .insert(cell.clone());
                 walkable = Some(false);
             }
             Item::Door => {
-                commands
-                    .spawn_bundle(sprite(handle, &cell))
-                    .insert(cell.clone())
-                    .insert(Door::Closed);
+                ent.insert(Door::Closed);
                 walkable = Some(false);
             }
             Item::Exit => {
-                commands
-                    .spawn_bundle(sprite(handle, &cell))
-                    .insert(cell.clone())
-                    .insert(Exit);
+                ent.insert(Exit);
             }
             Item::Wire => {
-                commands
-                    .spawn_bundle(sprite(handle, &cell))
-                    .insert(cell.clone())
-                    .insert(Wire);
+                ent.insert(Wire);
             }
         };
 

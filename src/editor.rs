@@ -46,7 +46,7 @@ impl Plugin for Editor {
 
 struct Selection;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 struct ItemRotation(f32);
 
 fn setup(
@@ -61,16 +61,17 @@ fn setup(
     let style: egui::Style = egui::Style::default();
     egui_context.ctx().set_style(style);
 
-    commands
-        .spawn()
-        .insert_bundle(OrthographicCameraBundle::new_2d());
+    let mut camera = OrthographicCameraBundle::new_2d();
+    camera.transform.scale = Vec3::new(2.0, 2.0, 2.0);
+    commands.spawn().insert_bundle(camera);
 
     let selection = materials.add(asset_server.load("cells/selection.png").into());
     let grid_pos = GridPosition::zero();
+    let mut transform = Position::from(grid_pos).to_transform();
     commands
         .spawn_bundle(SpriteBundle {
             material: selection,
-            transform: Position::from(grid_pos).to_transform(),
+            transform,
             ..Default::default()
         })
         .insert(Selection);
@@ -214,6 +215,23 @@ fn select_mode(ui: &mut Ui, title: &str, item: &mut ResMut<Mode>, new_item: Mode
     false
 }
 
+#[derive(Debug, PartialEq)]
+struct PreviousItem {
+    mode: Mode,
+    item: Item,
+    rotation: ItemRotation,
+}
+
+impl Default for PreviousItem {
+    fn default() -> Self {
+        Self {
+            mode: Mode::Add,
+            item: Item::Warden,
+            rotation: ItemRotation(0.0),
+        }
+    }
+}
+
 fn selection_follows_mouse(
     mut commands: Commands,
     windows: Res<Windows>,
@@ -224,31 +242,45 @@ fn selection_follows_mouse(
     item_rotation: Res<ItemRotation>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
+    mut previous: Local<PreviousItem>,
 ) {
     let camera_transform = cameras.single().expect("Wrong amount of cameras.");
     let window = windows.get_primary().unwrap();
-    if let Some(pos) = window.cursor_position() {
-        let size = Vec2::new(window.width() as f32, window.height() as f32);
-        let p = pos - size / 2.0;
-        let world_pos = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
-        let mut transform = Transform::from_xyz(world_pos.x.clone(), world_pos.y.clone(), 0.0);
+    let maybe_pos = window.cursor_position();
+    if maybe_pos.is_none() {
+        return;
+    }
+    let pos = maybe_pos.unwrap();
+    let size = Vec2::new(window.width() as f32, window.height() as f32);
+    let p = pos - size / 2.0;
+    let world_pos = camera_transform.compute_matrix() * p.extend(0.0).extend(1.0);
+    let mut transform = Transform::from_xyz(world_pos.x.clone(), world_pos.y.clone(), 0.0);
 
-        // Snap!
-        let snapped_pos = (transform.translation / GRID_SIZE).round() * GRID_SIZE;
-        transform.translation = snapped_pos;
+    // Snap!
+    let snapped_pos = (transform.translation / GRID_SIZE).round() * GRID_SIZE;
+    transform.translation = snapped_pos;
+    transform.translation.z = 5.0;
+    transform.rotation = angle_to_quat(item_rotation.0.clone());
 
-        let selection = selections.single().expect("Wrong amount of selections.");
+    let selection = selections.single().expect("Wrong amount of selections.");
+    let mut ent_cmd = commands.entity(selection);
 
+    let new = PreviousItem {
+        mode: mode.clone(),
+        item: item.clone(),
+        rotation: item_rotation.clone(),
+    };
+    if new != *previous {
         if *mode == Mode::Add {
             let material = materials.add(asset_server.load(item.path()).into());
-            commands.entity(selection).insert(material);
-            transform.rotation = angle_to_quat(item_rotation.0.clone());
+            ent_cmd.insert(material);
         } else {
             let material = materials.add(asset_server.load("cells/selection.png").into());
-            commands.entity(selection).insert(material);
+            ent_cmd.insert(material);
         }
-        commands.entity(selection).insert(transform);
     }
+    ent_cmd.insert(transform);
+    *previous = new;
 }
 
 fn click_add(
@@ -380,7 +412,7 @@ fn drag(
 
 struct UiFilename(String);
 
-#[derive(PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum Mode {
     Add,
     Select,
