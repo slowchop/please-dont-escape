@@ -529,6 +529,136 @@
         ]
       },
       "rotation": 90.0
+    },
+    {
+      "item": "WallCorner",
+      "position": {
+        "Grid": [
+          -10,
+          -11
+        ]
+      },
+      "rotation": 270.0
+    },
+    {
+      "item": "Prisoner",
+      "position": {
+        "Grid": [
+          -6,
+          -9
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Warden",
+      "position": {
+        "Grid": [
+          16,
+          -9
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Exit",
+      "position": {
+        "Grid": [
+          -14,
+          18
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Exit",
+      "position": {
+        "Grid": [
+          -16,
+          -23
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "GeneralTile",
+      "position": {
+        "Grid": [
+          26,
+          -3
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "GeneralTile",
+      "position": {
+        "Grid": [
+          27,
+          -8
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "GeneralTile",
+      "position": {
+        "Grid": [
+          26,
+          -15
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "GeneralTile",
+      "position": {
+        "Grid": [
+          21,
+          -18
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "GeneralTile",
+      "position": {
+        "Grid": [
+          14,
+          -19
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "GeneralTile",
+      "position": {
+        "Grid": [
+          6,
+          -21
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          33,
+          -15
+        ]
+      },
+      "rotation": 0.0
+    },
+    {
+      "item": "Wall",
+      "position": {
+        "Grid": [
+          30,
+          -19
+        ]
+      },
+      "rotation": 0.0
     }
   ]
 }

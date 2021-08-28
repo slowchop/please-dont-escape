@@ -63,7 +63,7 @@ fn setup(
     egui_context.ctx().set_style(style);
 
     let mut camera = OrthographicCameraBundle::new_2d();
-    camera.transform.scale = Vec3::new(2.0, 2.0, 2.0);
+    camera.transform.scale = Vec3::new(8.0, 8.0, 1.0);
     commands.spawn().insert_bundle(camera);
 
     let selection = materials.add(asset_server.load("cells/selection.png").into());
@@ -285,9 +285,8 @@ fn selection_follows_mouse(
     *previous = new;
 }
 
-pub fn rotate_key(keys: Res<Input<KeyCode>>, mut query: Query<&mut ItemRotation>) {
+pub fn rotate_key(keys: Res<Input<KeyCode>>, mut item_rotation: ResMut<ItemRotation>) {
     if keys.just_pressed(KeyCode::R) {
-        let mut item_rotation = query.single_mut().unwrap();
         item_rotation.0 += 90.0;
         if item_rotation.0 == 360.0 {
             *item_rotation = ItemRotation(0.0);
