@@ -129,7 +129,7 @@ fn setup(
     asset_server: Res<AssetServer>,
 ) {
     let mut camera = OrthographicCameraBundle::new_2d();
-    camera.transform.scale = Vec3::new(2.0, 2.0, 1.0);
+    camera.transform.scale = Vec3::new(2.0, 2.0, 4.0);
     commands.spawn_bundle(camera);
 
     let fonts = FontDefinitions::default();

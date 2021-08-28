@@ -39,7 +39,7 @@ pub fn run() {
 
     let mut app = App::build();
     app.insert_resource(WindowDescriptor {
-        title: "Please Don't Escape".to_string(),
+        title: "Please Do Not Escape".to_string(),
         width: 1920.0,
         height: 1080.0,
         resizable: false,
@@ -58,7 +58,6 @@ pub fn run() {
 
     app.add_plugin(EguiPlugin)
         .add_state(initial_app_state)
-        // .add_plugin(SplashScreen)
         .add_plugin(MainMenu)
         .add_plugin(Game)
         .add_plugin(Editor)
