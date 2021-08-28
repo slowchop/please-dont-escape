@@ -1,9 +1,10 @@
-use bevy::prelude::*;
-use crate::game::{GRID_SIZE, Door, Escaping, KeyboardControl, Prisoner, SpawnPoint, Warden};
 use crate::game;
+use crate::game::{Door, Escaping, KeyboardControl, Prisoner, SpawnPoint, Warden, GRID_SIZE};
+use crate::map::{ItemInfo, PathfindingMap};
 use crate::path::Path;
 use crate::position::{Direction, GridPosition, Position, Speed, Velocity};
-use crate::wires::{Smoking, Broken, Damaged, Wire};
+use crate::wires::{Broken, Damaged, Smoking, Wire};
+use bevy::prelude::*;
 use bevy::render::camera::Camera;
 
 #[derive(Debug, PartialEq)]
@@ -75,27 +76,31 @@ pub fn warden_actions(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
+    mut pathfinding_map: ResMut<PathfindingMap>,
     mut wardens: Query<(&Position, &Direction, &mut Action), With<Warden>>,
-    mut doors: Query<(Entity, &GridPosition, &Door)>,
+    mut doors: Query<(Entity, &GridPosition, &Door, &ItemInfo)>,
     prisoners: Query<(Entity, &Position, &SpawnPoint), (With<Prisoner>, With<Escaping>)>,
     broken_wires: Query<(Entity, &GridPosition, Option<&Broken>, Option<&Damaged>), With<Wire>>,
 ) {
     for (warden_pos, warden_dir, mut action) in wardens.iter_mut() {
+        dbg!("1");
         let forward_pos = &warden_pos.nearest_cell() + warden_dir;
-        for (door_ent, door_grid_pos, door) in doors.iter_mut() {
+        for (door_ent, door_grid_pos, door, door_item_info) in doors.iter_mut() {
+            dbg!("2");
             if &forward_pos != door_grid_pos {
                 continue;
             }
+            dbg!("3");
             *action = Action::Done;
 
-            match door {
-                Door::Closed => {
-                    game::change_door_state(&mut commands, door_ent, , true);
-                }
-                Door::Open => {
-                    game::change_door_state(&mut commands, door_ent, , false);
-                }
-            }
+            game::change_door_state(
+                &mut commands,
+                &mut pathfinding_map,
+                door_ent,
+                door_grid_pos,
+                door_item_info,
+                !door.0,
+            );
         }
 
         if *action == Action::Done {

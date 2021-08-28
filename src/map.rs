@@ -81,16 +81,9 @@ impl Item {
 
 pub struct Shape(pub Vec<GridPosition>);
 
-/// Specific cells that can be walked on. This should be added when NonWalkable was removed.
-#[derive(Debug)]
-pub struct Walkable;
-
-#[derive(Debug)]
-pub struct NonWalkable;
-
 #[derive(Debug)]
 pub struct PathfindingMap {
-    walkable_cells: bevy::utils::HashMap<GridPosition, bool>,
+    pub walkable_cells: bevy::utils::HashMap<GridPosition, bool>,
 }
 
 impl PathfindingMap {
@@ -136,22 +129,5 @@ impl PathfindingMap {
             },
             |c| c == dst,
         )
-    }
-}
-
-pub fn update_map_with_walkables(
-    mut map: ResMut<PathfindingMap>,
-    query: Query<
-        (&GridPosition, Option<&NonWalkable>, Option<&Walkable>),
-        Or<(Added<NonWalkable>, Added<Walkable>)>,
-    >,
-) {
-    for (cell, non_walk, walk) in query.iter() {
-        let walkable = match (non_walk.is_some(), walk.is_some()) {
-            (false, true) => true,
-            (true, false) => false,
-            _ => panic!("Something funny is going on with walk vs non walk."),
-        };
-        map.walkable_cells.insert(cell.clone(), walkable);
     }
 }

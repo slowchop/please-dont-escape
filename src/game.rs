@@ -12,7 +12,7 @@ use rand::prelude::IteratorRandom;
 use rand::{thread_rng, Rng, RngCore};
 
 use crate::input::exit_on_escape_key;
-use crate::map::{update_map_with_walkables, Item, Map, NonWalkable, PathfindingMap, Walkable, ItemInfo};
+use crate::map::{Item, ItemInfo, Map, PathfindingMap};
 use crate::path::Path;
 use crate::position::{
     apply_velocity, check_velocity_collisions, sync_sprite_positions, Direction, GridPosition,
@@ -80,7 +80,6 @@ impl Plugin for Game {
                             .label(Label::ApplyVelocity),
                     )
                     .with_system(sync_sprite_positions.system().after(Label::ApplyVelocity))
-                    .with_system(update_map_with_walkables.system())
                     .with_system(prisoner_escape.system())
                     //
                     .with_system(wires::damaged_check_if_broken.system())
@@ -115,10 +114,7 @@ pub struct Escaping;
 pub struct SpawnPoint(pub GridPosition);
 
 #[derive(Debug)]
-pub enum Door {
-    Open,
-    Closed,
-}
+pub struct Door(pub bool);
 
 pub struct Alpha(pub f32);
 
@@ -129,6 +125,7 @@ fn setup(
     mut commands: Commands,
     mut egui_context: ResMut<EguiContext>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut pathfinding_map: ResMut<PathfindingMap>,
     asset_server: Res<AssetServer>,
 ) {
     let mut camera = OrthographicCameraBundle::new_2d();
@@ -150,42 +147,40 @@ fn setup(
     let mut items_added: HashMap<GridPosition, ()> = HashMap::default();
 
     for item_info in &map.items {
-        let cell = item_info.position.nearest_cell_grid_pos();
+        let grid_pos = item_info.position.nearest_cell_grid_pos();
         let pos: Position = item_info.position.into();
         if first {
-            min = cell.clone();
-            max = cell.clone();
+            min = grid_pos.clone();
+            max = grid_pos.clone();
             first = false;
         } else {
-            if min.0.x > cell.0.x {
-                min.0.x = cell.0.x;
+            if min.0.x > grid_pos.0.x {
+                min.0.x = grid_pos.0.x;
             }
-            if min.0.y > cell.0.y {
-                min.0.y = cell.0.y;
+            if min.0.y > grid_pos.0.y {
+                min.0.y = grid_pos.0.y;
             }
-            if max.0.x < cell.0.x {
-                max.0.x = cell.0.x;
+            if max.0.x < grid_pos.0.x {
+                max.0.x = grid_pos.0.x;
             }
-            if max.0.y < cell.0.y {
-                max.0.y = cell.0.y;
+            if max.0.y < grid_pos.0.y {
+                max.0.y = grid_pos.0.y;
             }
         }
 
-        // None, don't affect the map.
-        // Some(true) Walkable component
-        // Some(false) NonWalkable component
-        let mut walkable = None;
-
-        let mut needs_cell = false;
+        let mut walkable = true;
 
         let handle = materials.add(asset_server.load(item_info.item.path()).into());
-        let mut ent = commands.spawn_bundle(sprite(handle, &cell));
+        let mut ent = commands.spawn_bundle(sprite(handle, &grid_pos));
         ent.insert(pos).insert(item_info.clone());
 
         match &item_info.item {
-            Item::Background(_) => {}
+            Item::Background(_) => {
+                ent.insert(grid_pos);
+            }
             Item::Warden => {
                 ent //
+                    .insert(pos)
                     .insert(Direction::new())
                     .insert(Velocity::zero())
                     .insert(Warden)
@@ -194,41 +189,39 @@ fn setup(
             }
             Item::Prisoner => {
                 ent //
+                    .insert(pos)
                     .insert(Velocity::zero())
                     .insert(Prisoner)
-                    .insert(SpawnPoint(cell.clone()))
+                    .insert(SpawnPoint(grid_pos.clone()))
                     .insert(Speed::bad_guy());
-                needs_cell = true;
             }
             Item::Wall => {
-                walkable = Some(false);
+                ent.insert(grid_pos);
+                walkable = false;
             }
             Item::WallCorner => {
-                walkable = Some(false);
+                ent.insert(grid_pos);
+                walkable = false;
             }
             Item::Door => {
-                ent.insert(Door::Closed);
-                walkable = Some(false);
+                ent.insert(grid_pos).insert(Door(false));
+                walkable = false;
             }
             Item::Exit => {
-                ent.insert(Exit);
+                ent.insert(grid_pos).insert(Exit);
             }
             Item::Wire => {
-                ent.insert(Wire);
+                ent.insert(grid_pos).insert(Wire);
             }
         };
 
         // Fill out the "shape" of the item
         for delta in &item_info.shape().0 {
-            let delta_cell = &cell + delta;
-            if walkable == Some(false) {
+            let delta_cell = &grid_pos + delta;
+            if walkable == false {
                 items_added.insert(delta_cell, ());
-                commands.spawn().insert(delta_cell.clone()).insert(NonWalkable);
+                pathfinding_map.walkable_cells.insert(delta_cell, false);
             }
-
-            // if needs_cell {
-            //     commands.spawn().insert(cell.clone()).insert(PrisonRoom);
-            // }
         }
     }
 
@@ -238,8 +231,7 @@ fn setup(
             if items_added.contains_key(&cell) {
                 continue;
             }
-
-            commands.spawn().insert(cell).insert(Walkable);
+            pathfinding_map.walkable_cells.insert(cell.clone(), true);
         }
     }
 }
@@ -271,29 +263,28 @@ fn sprite(material: Handle<ColorMaterial>, cell: &GridPosition) -> SpriteBundle 
     }
 }
 
-pub fn change_door_state(commands: &mut Commands, door_ent: Entity, door_item_info: &ItemInfo, open: bool) {
+pub fn change_door_state(
+    commands: &mut Commands,
+    pathfinding_map: &mut PathfindingMap,
+    door_ent: Entity,
+    door_grid_pos: &GridPosition,
+    door_item_info: &ItemInfo,
+    open: bool,
+) {
     let mut e = commands.entity(door_ent);
 
-    let door = match open {
-        true => Door::Open,
-        false => Door::Closed,
-    };
+    dbg!(&open);
 
     e //
-        .insert(door)
-        .remove::<Walkable>()
-        .remove::<NonWalkable>()
+        .insert(Door(open))
         .insert(Visible {
             is_visible: !open,
             is_transparent: false,
         });
 
     for delta in door_item_info.shape().0 {
-        if open {
-            e.insert(Walkable);
-        } else {
-            e.insert(NonWalkable);
-        };
+        let delta_cell = door_grid_pos + &delta;
+        pathfinding_map.walkable_cells.insert(delta_cell, open);
     }
 }
 

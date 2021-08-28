@@ -1,15 +1,16 @@
-use bevy::prelude::*;
-use rand::{RngCore, thread_rng};
-use rand::prelude::IteratorRandom;
 use crate::game;
 use crate::game::{Alpha, Door};
+use crate::map::{ItemInfo, PathfindingMap};
+use crate::position::GridPosition;
+use bevy::prelude::*;
+use rand::prelude::IteratorRandom;
+use rand::{thread_rng, RngCore, random};
 
 #[derive(Debug)]
 pub struct Smoke;
 
 #[derive(Debug)]
 pub struct Smoking(Timer);
-
 
 pub fn damage_wires(
     mut commands: Commands,
@@ -65,9 +66,15 @@ pub fn damaged_smoke(
 
 pub fn open_doors_if_any_wires_are_broken(
     mut commands: Commands,
+    mut pathfinding_map: ResMut<PathfindingMap>,
     broken_wires: Query<(Entity), (With<Wire>, With<Broken>)>,
-    doors: Query<Entity, With<Door>>,
+    doors: Query<(Entity, &ItemInfo, &GridPosition), With<Door>>,
 ) {
+    if random::<i64>() % 1000 == 0 {
+        info!("skipping open_doors_if_any_wires_are_broken");
+    }
+    return;
+
     let mut found = false;
     for _ in broken_wires.iter() {
         found = true;
@@ -77,8 +84,15 @@ pub fn open_doors_if_any_wires_are_broken(
         return;
     }
 
-    for door_ent in doors.iter() {
-        game::change_door_state(&mut commands, door_ent, , true);
+    for (door_ent, door_item_info, door_grid_pos) in doors.iter() {
+        game::change_door_state(
+            &mut commands,
+            &mut pathfinding_map,
+            door_ent,
+            door_grid_pos,
+            door_item_info,
+            true,
+        );
     }
 }
 
