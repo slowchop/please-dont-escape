@@ -4,20 +4,18 @@ mod input;
 mod map;
 mod menus;
 mod path;
-mod position;
-mod splash;
-mod wires;
 mod player;
+mod position;
+mod wires;
 
+use crate::editor::Editor;
 use crate::game::Game;
 use crate::menus::MainMenu;
-use crate::splash::SplashScreen;
-use bevy::prelude::*;
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
+use slowchop::{SplashScreen, SplashScreenConfig};
 use std::env;
 use wasm_bindgen::prelude::*;
-use crate::editor::Editor;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum AppState {
@@ -56,10 +54,16 @@ pub fn run() {
     #[cfg(target_arch = "wasm32")]
     app.add_plugin(bevy_webgl2::WebGL2Plugin);
 
-    app.add_plugin(EguiPlugin)
+    app //
+        .add_plugin(EguiPlugin)
         .add_state(initial_app_state)
-        .add_plugin(MainMenu)
-        .add_plugin(Game)
-        .add_plugin(Editor)
+        .insert_resource(SplashScreenConfig {
+            timer: Timer::from_seconds(2.0, false),
+            image: "menus/logo.png".to_string(),
+        })
+        .add_plugin(SplashScreen)
+        // .add_plugin(MainMenu)
+        // .add_plugin(Game)
+        // .add_plugin(Editor)
         .run();
 }

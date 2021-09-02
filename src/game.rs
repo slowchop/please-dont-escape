@@ -39,6 +39,31 @@ pub struct Game;
 impl Plugin for Game {
     fn build(&self, app: &mut AppBuilder) {
         app.insert_resource(PathfindingMap::new())
+            .add_system_set(
+                SystemSet::on_enter(AppState::InGame)
+                    .with_system(setup.system().label(Label::Setup)),
+            )
+            .add_system_set(
+                SystemSet::on_update(AppState::InGame)
+                    .with_system(ui.system())
+                    .with_system(player::player_keyboard_action.system()),
+            )
+            .add_stage_after(
+                CoreStage::Update,
+                FixedUpdateStage,
+                SystemStage::parallel()
+                    .with_run_criteria(FixedTimestep::step(1f64 / 60f64))
+                    // I would want all of these to only run in AppState::InGame
+                    .with_system(
+                        player::player_keyboard_movement
+                            .system()
+                            .before(Label::CheckVelocityCollisions),
+                    )
+                    .with_system(player::chase_camera.system()),
+            );
+
+
+        app.insert_resource(PathfindingMap::new())
             //
             .add_system_set(
                 SystemSet::on_enter(AppState::InGame)
