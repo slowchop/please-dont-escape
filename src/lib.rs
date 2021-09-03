@@ -57,10 +57,7 @@ pub fn run() {
     app //
         .add_plugin(EguiPlugin)
         .add_state(initial_app_state)
-        .insert_resource(SplashScreenConfig {
-            timer: Timer::from_seconds(2.0, false),
-            image: "menus/logo.png".to_string(),
-        })
+        .insert_resource(SplashScreenConfig::start(2.0, "menus/logo.png".into()))
         .add_plugin(SplashScreen)
         // .add_plugin(MainMenu)
         // .add_plugin(Game)
