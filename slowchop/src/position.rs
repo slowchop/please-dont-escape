@@ -1,5 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use derive_more::{Add, AddAssign, From};
+use derive_more::{Add, AddAssign, From, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 use fixed::prelude::LossyInto;
 use fixed::types::I44F20;
 use nalgebra::Vector3;
@@ -11,7 +11,7 @@ use bevy::prelude::*;
 const Z_SNAP: u32 = 10;
 
 /// A wrapper around a fixed point value using the `fixed` crate.
-#[derive(Debug, Clone, PartialEq, Add, AddAssign, From)]
+#[derive(Debug, Clone, PartialEq, From, Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign)]
 pub struct Fixed64(I44F20);
 
 impl Fixed64 {

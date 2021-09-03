@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 pub struct SplashScreen;
 
 #[derive(Debug)]
-pub enum SplashScreenConfig {
+pub enum SplashScreenState {
     Stopped,
     Active {
         timer: Timer,
@@ -17,7 +17,7 @@ pub enum SplashScreenConfig {
     },
 }
 
-impl SplashScreenConfig {
+impl SplashScreenState {
     pub fn start(seconds: f32, image: String) -> Self {
         Self::Active {
             timer: Timer::from_seconds(seconds, false),
@@ -43,15 +43,15 @@ fn run(
     time: Res<Time>,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut config: ResMut<SplashScreenConfig>,
+    mut config: ResMut<SplashScreenState>,
     mut keys: ResMut<Input<KeyCode>>,
     mut mouse_button: ResMut<Input<MouseButton>>,
 ) {
     match &mut *config {
-        SplashScreenConfig::Stopped => {
+        SplashScreenState::Stopped => {
             return;
         }
-        SplashScreenConfig::Active {
+        SplashScreenState::Active {
             timer,
             image,
             entity,
@@ -88,7 +88,7 @@ fn run(
             if done {
                 if let Some(e) = entity {
                     commands.entity(*e).despawn_recursive();
-                    *config = SplashScreenConfig::Stopped;
+                    *config = SplashScreenState::Stopped;
                 }
             }
         }

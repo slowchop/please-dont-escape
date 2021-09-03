@@ -11,15 +11,16 @@ mod wires;
 use crate::editor::Editor;
 use crate::game::Game;
 use crate::menus::MainMenu;
+use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
-use slowchop::{SplashScreen, SplashScreenConfig};
+use slowchop::{SplashScreen, SplashScreenState};
 use std::env;
 use wasm_bindgen::prelude::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum AppState {
-    SplashScreen,
+    Splash,
     AskPlayerName,
     MainMenu,
     InGame,
@@ -57,10 +58,26 @@ pub fn run() {
     app //
         .add_plugin(EguiPlugin)
         .add_state(initial_app_state)
-        .insert_resource(SplashScreenConfig::start(2.0, "menus/logo.png".into()))
+        .insert_resource(SplashScreenState::start(2.0, "menus/logo.png".into()))
+        .add_system_set(
+            SystemSet::on_update(AppState::Splash)
+                .with_system(check_when_splash_is_finished.system()),
+        )
         .add_plugin(SplashScreen)
-        // .add_plugin(MainMenu)
-        // .add_plugin(Game)
-        // .add_plugin(Editor)
+        .add_plugin(MainMenu)
+        .add_plugin(Game)
+        .add_plugin(Editor)
         .run();
+}
+
+fn check_when_splash_is_finished(
+    mut state: ResMut<State<AppState>>,
+    splash: Res<SplashScreenState>,
+) {
+    match *splash {
+        SplashScreenState::Stopped => {
+            state.set(AppState::MainMenu);
+        }
+        _ => {}
+    }
 }

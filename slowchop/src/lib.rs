@@ -1,12 +1,5 @@
 mod position;
 mod splash;
 
-pub use splash::{SplashScreen, SplashScreenConfig};
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+pub use position::{Cell, Fixed64, Position};
+pub use splash::{SplashScreen, SplashScreenState};
